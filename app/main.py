@@ -1,14 +1,9 @@
 # app/main.py
 from fastapi import FastAPI, HTTPException, Depends
-from pydantic import BaseModel
-from typing import Optional
+from app.models import UserQuery
 from app.services import BotService
 
 app = FastAPI()
-
-class UserQuery(BaseModel):
-    question: str
-    user_id: Optional[int] = None
 
 # Initialize BotService
 bot_service = BotService()
