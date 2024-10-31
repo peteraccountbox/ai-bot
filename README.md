@@ -1,15 +1,29 @@
 # AI Bot Project
 
-A Python-based AI chatbot project that leverages artificial intelligence to provide conversational interactions.
+A FastAPI-based intelligent chatbot that processes URLs and answers questions using OpenAI's GPT-4 and Qdrant vector database for semantic search.
 
-## Setup
+## Features
 
-1. Clone the repository: 
+- URL Content Processing: Extract and store content from web pages
+- Semantic Search: Using OpenAI embeddings with Qdrant vector database
+- Intelligent Q&A: GPT-4 powered responses based on stored content
+- REST API: FastAPI-based endpoints for easy integration
+
+## Prerequisites
+
+- Python 3.12+
+- OpenAI API key
+- Qdrant server (local or cloud)
+
+## Installation
+
+1. **Clone the repository**
 ```bash
 git clone [your-repository-url]
+cd AIBotProject
 ```
 
-2. Create and activate virtual environment:
+2. **Set up virtual environment**
 ```bash
 python -m venv .venv
 source .venv/bin/activate  # On Windows, use `.venv\Scripts\activate`
@@ -36,11 +50,6 @@ AIBotProject/
 ## Usage
 
 [Add specific instructions on how to run and use your bot]
-
-## Features
-
-- [List key features of your bot]
-- [Add more features as they are implemented]
 
 ## Contributing
 
