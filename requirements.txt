@@ -1,2 +1,37 @@
-fastapi
-uvicorn
+# Core Framework
+fastapi>=0.109.0
+uvicorn>=0.27.0
+pydantic>=2.6.0
+
+# OpenAI
+openai>=1.12.0
+
+# Vector Database
+qdrant-client>=1.7.0
+
+# HTTP and Networking
+httpx>=0.26.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0  # For web scraping
+python-multipart>=0.0.9
+
+# Environment and Config
+python-dotenv>=1.0.0
+
+# Data Processing
+numpy>=1.26.0
+pandas>=2.2.0
+
+# API Documentation
+starlette>=0.36.0
+
+# Development Tools
+pytest>=8.0.0
+black>=24.1.0  # Code formatting
+flake8>=7.0.0  # Code linting
+isort>=5.13.0  # Import sorting
+
+# Type Checking
+mypy>=1.8.0
+types-requests>=2.31.0
+types-

@@ -34,23 +34,32 @@ class EmbeddingService:
         self.embedding_dao.store_embedding(url, embedding, content)
 
     def retrieve_answer(self, user_input):
-        # Generate embedding for user input and query ChromaDB for top 10 results
         user_embedding = self.generate_embedding(user_input)
-        #print(user_embedding)
-
         results = self.embedding_dao.query_embedding(user_embedding, n_results=10)
-        #print("Query result:", results)  # Add this temporarily to see the structure
 
-        # Get documents from the raw response
+        # Get both documents and metadata
         documents = results.get('documents', [[]])[0]
-        combined_context = ' '.join(documents)
-       
-        print(combined_context)
+        metadatas = results.get('metadatas', [[]])[0]
+        distances = results.get('distances', [[]])[0] if 'distances' in results else []
 
-        #text-davinci-003
-        #gpt-4o-mini
-        #gpt-4
-        # Use OpenAI's language model to generate an answer
+        # Combine documents with their sources
+        context_parts = []
+        sources = []
+        
+        for doc, meta, dist in zip(documents, metadatas, distances):
+            source_url = meta.get('url', 'N/A') if meta else 'N/A'
+            similarity = 1 - dist if dist else 0
+            
+            # Add to context with source reference
+            context_parts.append(f"{doc}")
+            # Keep track of sources
+            sources.append({
+                'url': source_url,
+                'similarity': f"{similarity:.2%}"
+            })
+
+        combined_context = ' '.join(context_parts)
+
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
@@ -60,4 +69,14 @@ class EmbeddingService:
             temperature=0.7,
             max_tokens=300
         )
-        return response.choices[0].message.content.strip()
+
+        # Return both the answer and sources
+        return {
+            "answer": response.choices[0].message.content.strip(),
+            "sources": sources,
+            "metadata": {
+                "total_sources": len(sources),
+                "model_used": "gpt-4",
+                "context_length": len(combined_context)
+            }
+        }
