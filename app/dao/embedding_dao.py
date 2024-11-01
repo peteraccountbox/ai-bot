@@ -17,9 +17,9 @@ class EmbeddingDAO:
         # Store embedding and content in ChromaDB
         self.collection.add(
             documents=[content],
-            metadatas=[metadatas],
+            metadatas=metadatas,
             embeddings=[embedding],
-            ids=[title]  # For single vector
+            ids=[title]
         )
 
     def query_embedding(self, embedding, n_results=10):
