@@ -61,13 +61,13 @@ class EmbeddingService:
         combined_context = ' '.join(context_parts)
 
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant that answers questions based on the provided context."},
-                {"role": "user", "content": f"Context: {combined_context}\n\nQuestion: {user_input}\n\nAnswer the question based only on the provided context."}
+                {"role": "system", "content": "You're EngageBay's CRM assistant. Answer in bullet points, max 2 sentences per point."},
+                {"role": "user", "content": f"Context: {combined_context}\n\nQuestion: {user_input}\n\nAnswer from context only."}
             ],
             temperature=0.7,
-            max_tokens=300
+            #max_tokens=3
         )
 
         # Return both the answer and sources
