@@ -14,7 +14,7 @@ def read_root():
 @router.post("/train")
 async def store_url(request: URLRequest):
     try:
-        embedding_service.store_url_content(request.url)
+        embedding_service.process_url(request.url)
         return {"message": "URL content stored successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

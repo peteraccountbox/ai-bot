@@ -1,39 +1,33 @@
 # services/embedding_service.py
 
-import requests
-import os
-from bs4 import BeautifulSoup
+from app.utils.scraping_utils import WebScraper
 from openai import OpenAI
 from app.dao.embedding_dao import EmbeddingDAO
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 class EmbeddingService:
     def __init__(self):
+        self.client = OpenAI()
         self.embedding_dao = EmbeddingDAO()
+        self.scraper = WebScraper()
 
-    def scrape_text(self, url):
-        # Scrape and parse text content from a URL
-        response = requests.get(url)
-        soup = BeautifulSoup(response.content, 'html.parser')
-        text = ' '.join(p.get_text() for p in soup.find_all('p'))
-        return text
+    def process_url(self, url: str):
+        # Get content
+        content = self.scraper.scrape_url(url)
+    
+        # Generate embedding
+        embedding = self.generate_embedding(content)
+        
+        return self.embedding_dao.store_embedding(url, embedding, content)
 
     def generate_embedding(self, text):
         # Generate embeddings using OpenAI's `text-embedding-ada-002`
-        response = client.embeddings.create(
+        response = self.client.embeddings.create(
             model="text-embedding-ada-002",
             input=text
         )
         return response.data[0].embedding
 
-    def store_url_content(self, url):
-        # Scrape text, generate embedding, and store in ChromaDB
-        content = self.scrape_text(url)
-        embedding = self.generate_embedding(content)
-        self.embedding_dao.store_embedding(url, embedding, content)
-
-    def retrieve_answer(self, user_input):
+    def retrieve_answer(self, user_input: str):
         user_embedding = self.generate_embedding(user_input)
         results = self.embedding_dao.query_embedding(user_embedding, n_results=10)
 
@@ -60,11 +54,11 @@ class EmbeddingService:
 
         combined_context = ' '.join(context_parts)
 
-        response = client.chat.completions.create(
+        response = self.client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You're EngageBay's CRM assistant. Answer in bullet points, max 2 sentences per point."},
-                {"role": "user", "content": f"Context: {combined_context}\n\nQuestion: {user_input}\n\nAnswer from context only."}
+                {"role": "system", "content": "You're EngageBay's multilingual CRM assistant. Detect the language of the question and respond in the same language. Answer in bullet points, max 2 sentences per point."},
+                {"role": "user", "content": f"Context: {combined_context}\n\nQuestion: {user_input}\n\nAnswer from context only, in the same language as the question."}
             ],
             temperature=0.7,
             #max_tokens=3
