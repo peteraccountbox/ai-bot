@@ -23,7 +23,7 @@ class EmbeddingService:
         elif request.type == ContentType.FILE:
             content = await self.file_extractor.extract_text_from_url(request.content)
         else:
-            content = request.content
+            content = self.scraper.extract_text_from_html(request.content)
     
         # Generate embedding
         embedding = self.generate_embedding(content)

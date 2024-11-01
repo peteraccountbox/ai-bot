@@ -32,6 +32,14 @@ class WebScraper:
         except requests.RequestException as e:
             raise Exception(f"Failed to scrape URL {url}: {str(e)}")
 
+    def extract_text_from_html(self, html_content: str) -> str:
+        """Extract text from raw HTML string."""
+        if not self._is_html(html_content):
+            return html_content
+        
+        soup = BeautifulSoup(html_content, 'html.parser')
+        return self._extract_text(str(soup))
+    
     def _extract_text(self, content: bytes) -> str:
         """Extract and clean text from HTML content."""
         soup = BeautifulSoup(content, 'html.parser')
@@ -60,6 +68,9 @@ class WebScraper:
         text = re.sub(r'([A-Z])\s+(?=[a-z])', r'\1', text)  # Fix split words
         
         return text.strip()
+
+    def _is_html(self, text: str) -> bool:
+        return bool(re.search(r'<[^>]+>', text))
 
     def _is_valid_element(self, element) -> bool:
         """Check if text element should be included."""
