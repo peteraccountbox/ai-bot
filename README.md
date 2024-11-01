@@ -1,32 +1,55 @@
 # AI Bot Project
 
-A FastAPI-based intelligent chatbot that processes URLs and answers questions using OpenAI's GPT-4 and Qdrant vector database for semantic search.
+A conversational AI bot that can process various types of content, generate embeddings, and provide contextual responses.
 
 ## Features
 
-- URL Content Processing: Extract and store content from web pages
-- Semantic Search: Using OpenAI embeddings with Qdrant vector database
-- Intelligent Q&A: GPT-4 powered responses based on stored content
-- REST API: FastAPI-based endpoints for easy integration
+- Content Processing:
+  - URL Scraping: Extract content from web pages
+  - File Processing: Support for files hosted at URLs (PDF, DOCX, etc.)
+  - Direct Text Input: Process raw text content
+
+- Embedding Generation:
+  - Uses OpenAI's `text-embedding-ada-002` model
+  - Stores embeddings with metadata for easy retrieval
+  - Supports similarity search for relevant context
+
+## API Endpoints
+
+### Train Endpoint
+Train the bot with new content:
+```json
+POST /train
+{
+    "type": "URL|FILE|TEXT",
+    "content": "URL or text content",
+    "title": "Unique title for the content"
+}
+```
+
+- `type`: Content type (URL, FILE, or TEXT)
+- `content`: URL, file path, or raw text content
+- `title`: Unique title for the content
 
 ## Prerequisites
 
-- Python 3.12+
+- Python 3.10+
 - OpenAI API key
-- Qdrant server (local or cloud)
+- Qdrant running instance
+- pip (Python package manager)
 
 ## Installation
 
-1. **Clone the repository**
+1. Clone the repository:
 ```bash
-git clone [your-repository-url]
+git clone https://github.com/yourusername/AIBotProject.git
 cd AIBotProject
 ```
 
-2. **Set up virtual environment**
+2. Create and activate a virtual environment:
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows, use `.venv\Scripts\activate`
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
 3. Install dependencies:
