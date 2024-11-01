@@ -1,7 +1,7 @@
 # controllers/embedding_controller.py
 
 from fastapi import APIRouter, HTTPException
-from app.models.schemas import URLRequest, QueryRequest
+from app.models.schemas import TrainRequest, QueryRequest
 from app.services.embedding_service import EmbeddingService
 
 router = APIRouter()
@@ -12,9 +12,9 @@ def read_root():
     return {"message": "Welcome to AI Bot API!"}
 
 @router.post("/train")
-async def store_url(request: URLRequest):
+async def store_url(request: TrainRequest):
     try:
-        embedding_service.process_url(request.url)
+        await embedding_service.process_payload(request)
         return {"message": "URL content stored successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -13,13 +13,13 @@ class EmbeddingDAO:
         # Initialize ChromaDB client
         self.collection = self.client.get_or_create_collection("client_collection")
 
-    def store_embedding(self, url, embedding, content):
+    def store_embedding(self, metadatas, embedding, content, title):
         # Store embedding and content in ChromaDB
         self.collection.add(
             documents=[content],
-            metadatas=[{"url": url}],
+            metadatas=[metadatas],
             embeddings=[embedding],
-            ids=[url]  # For single vector
+            ids=[title]  # For single vector
         )
 
     def query_embedding(self, embedding, n_results=10):
