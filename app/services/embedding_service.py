@@ -31,12 +31,12 @@ class EmbeddingService:
         # Store metadata
         metadatas = [
             {
-                "url": request.content,
-                "title": request.title
+                "url": request.content if request.type in (ContentType.URL, ContentType.FILE) else request.title,
+                "title": request.title,
+                "type": request.type.value
             }
         ]
 
-        # [{"url": url}]
         return self.embedding_dao.store_embedding(metadatas, embedding, content, request.title)
 
     def generate_embedding(self, text):
