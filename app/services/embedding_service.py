@@ -4,8 +4,6 @@ from app.utils.scraping_utils import WebScraper
 from openai import OpenAI
 from app.dao.embedding_dao import EmbeddingDAO
 from app.models.schemas import TrainRequest, ContentType
-import base64
-import io
 from typing import Optional
 from app.utils.file_extractor import FileExtractor
 
