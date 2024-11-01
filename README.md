@@ -35,10 +35,10 @@ POST /train
 
 - Python 3.10+
 - OpenAI API key
-- Qdrant running instance
+- Docker (for running Qdrant)
 - pip (Python package manager)
 
-## Installation
+## Installation & Setup
 
 1. Clone the repository:
 ```bash
@@ -55,6 +55,93 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 3. Install dependencies:
 ```bash
 pip install -r requirements.txt
+```
+
+4. Start Qdrant using Docker:
+```bash
+docker pull qdrant/qdrant
+docker run -p 6333:6333 -p 6334:6334 \
+    -v $(pwd)/qdrant_storage:/qdrant/storage \
+    qdrant/qdrant
+```
+
+5. Set up environment variables:
+```bash
+# Create .env file
+cp .env.example .env
+
+# Edit .env with your values:
+OPENAI_API_KEY=your_api_key
+QDRANT_HOST=localhost
+QDRANT_PORT=6333
+```
+
+6. Start the FastAPI server:
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+
+The API will be available at: http://localhost:8000
+Swagger documentation: http://localhost:8000/docs
+
+## Development Setup
+
+For development, additional tools are recommended:
+```bash
+pip install pytest pytest-asyncio black isort flake8
+```
+
+Run tests:
+```bash
+pytest
+```
+
+Format code:
+```bash
+black .
+isort .
+flake8
+```
+
+## Database Management
+
+### Qdrant Collections
+
+The project uses Qdrant vector database. Collections are automatically created on startup, but you can manually manage them:
+
+```python
+from qdrant_client import QdrantClient
+
+client = QdrantClient("localhost", port=6333)
+
+# Create collection
+client.create_collection(
+    collection_name="documents",
+    vectors_config={
+        "size": 1536,  # OpenAI embedding dimension
+        "distance": "Cosine"
+    }
+)
+
+# List collections
+client.get_collections()
+
+# Delete collection
+client.delete_collection(collection_name="documents")
+```
+
+### Backup & Restore
+
+Backup Qdrant data:
+```bash
+# Stop the container
+docker stop qdrant_container
+
+# Backup the storage directory
+cp -r qdrant_storage qdrant_backup
+
+# Restart the container
+docker start qdrant_container
 ```
 
 ## Project Structure
