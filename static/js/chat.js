@@ -1,3 +1,28 @@
+function showLoader() {
+    const loaderHtml = `
+        <div class="loader-message bot-message">
+            <div class="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    `;
+    $('#chat-box').append(loaderHtml);
+    $('#chat-box').scrollTop($('#chat-box')[0].scrollHeight);
+
+    // Disable input while loading
+    $('.input-container').addClass('loading');
+    $('#user-input, #send-button').prop('disabled', true);
+}
+
+function hideLoader() {
+    $('.loader-message').remove();
+    // Enable input after loading
+    $('.input-container').removeClass('loading');
+    $('#user-input, #send-button').prop('disabled', false);
+}
+
 function appendMessage(messageData, type) {
     const chatBox = $('#chat-box');
     const messageDiv = $('<div>').addClass('message').addClass(type + '-message');
@@ -13,7 +38,7 @@ function appendMessage(messageData, type) {
             .sort((a, b) => {
                 return parseFloat(b.similarity.replace('%', '')) - parseFloat(a.similarity.replace('%', ''))
             })
-            .slice(0, 5); // Take top 5 sources
+            .slice(0, 5);
 
         if (relevantSources.length > 0) {
             const sourcesContainer = $('<div>').addClass('sources-container');
@@ -46,9 +71,15 @@ function sendMessage() {
     const message = userInput.val().trim();
 
     if (message) {
+        // Remove welcome message if it exists
+        $('.welcome-message').remove();
+
         // Display user message
         appendMessage(message, 'user');
         userInput.val('');
+
+        // Show loader
+        showLoader();
 
         // Send to your API endpoint
         $.ajax({
@@ -59,6 +90,9 @@ function sendMessage() {
                 "query": message
             }),
             success: function (response) {
+                // Hide loader
+                hideLoader();
+
                 if (response.answer) {
                     appendMessage(response, 'bot');
                 } else {
@@ -66,6 +100,9 @@ function sendMessage() {
                 }
             },
             error: function (error) {
+                // Hide loader
+                hideLoader();
+
                 appendMessage('Sorry, there was an error processing your request.', 'bot');
                 console.error('Error:', error);
             }
@@ -73,11 +110,10 @@ function sendMessage() {
     }
 }
 
-// Initialize chat functionality when document is ready
+// Handle Enter key
 $(document).ready(function () {
-    // Handle Enter key
     $('#user-input').keypress(function (e) {
-        if (e.which == 13) {
+        if (e.which == 13 && !$('#send-button').prop('disabled')) {
             sendMessage();
         }
     });
