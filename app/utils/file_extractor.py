@@ -2,6 +2,8 @@ import base64
 import io
 from typing import Optional
 import aiohttp
+from PyPDF2 import PdfReader
+
 class FileExtractor:
     async def extract_text_from_url(self, url: str) -> str:
         async with aiohttp.ClientSession() as session:
@@ -36,5 +38,29 @@ class FileExtractor:
         return 'text/plain'
 
     async def extract_text(self, file_obj: io.BytesIO, file_type: str) -> str:
-        # Implement text extraction based on file_type
-        pass 
+        if file_type == 'text/plain':
+            try:
+                # Read the contents of the BytesIO object and decode as UTF-8
+                text_content = file_obj.getvalue().decode('utf-8')
+                return text_content
+            except UnicodeDecodeError:
+                raise ValueError("Failed to decode file content as UTF-8. Please ensure the file contains valid text.")
+            
+        elif file_type == 'application/pdf':
+            try:
+                # Create PDF reader object
+                pdf_reader = PdfReader(file_obj)
+                
+                # Extract text from all pages
+                text_content = []
+                for page in pdf_reader.pages:
+                    text_content.append(page.extract_text())
+                
+                # Join all pages with newlines
+                return "\n".join(text_content)
+            except Exception as e:
+                raise ValueError(f"Failed to extract text from PDF: {str(e)}")
+            
+        else:
+            raise ValueError(f"Unsupported file type: {file_type}. Currently supported formats: text/plain, application/pdf")
+            

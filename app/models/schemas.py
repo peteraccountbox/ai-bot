@@ -7,6 +7,9 @@ class ContentType(str, Enum):
     RAW_CONTENT = "RAW_CONTENT"
     FILE = "FILE"
 
+class QueryRequest(BaseModel):
+    query: str
+
 class TrainRequest(BaseModel):
     type: ContentType
     content: str
