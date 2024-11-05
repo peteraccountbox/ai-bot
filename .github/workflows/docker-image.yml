@@ -1,0 +1,59 @@
+name: Build and Deploy to EC2
+
+on:
+  push:
+    branches:
+      - multi_type_support  # Change this to your default branch
+
+env:
+  EC2_HOST: ec2-52-37-221-188.us-west-2.compute.amazonaws.com
+  EC2_USER: ubuntu
+  EC2_KEY: ${{ secrets.EC2_KEY }}  # SSH private key
+  EC2_DIR: ~/ai-bot/
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Build Docker images using docker-compose
+      run: |
+        # Build the images specified in the docker-compose.yml
+        docker-compose build
+
+    - name: Save Docker images to tar
+      run: |
+        # Save each built image to a tar file
+        docker save -o app.tar app:latest
+        docker save -o chroma.tar chroma:latest
+
+    - name: Deploy to EC2
+      run: |
+        echo "${{ secrets.EC2_KEY }}" > ec2_key.pem
+        chmod 600 ec2_key.pem
+
+        # Copy the tar files to the EC2 instance
+        scp -o StrictHostKeyChecking=no -i ec2_key.pem app.tar ${EC2_USER}@${EC2_HOST}:${EC2_DIR}/
+        scp -o StrictHostKeyChecking=no -i ec2_key.pem chroma.tar ${EC2_USER}@${EC2_HOST}:${EC2_DIR}/
+
+        # SSH into the EC2 instance and load the Docker images
+        ssh -o StrictHostKeyChecking=no -i ec2_key.pem ${EC2_USER}@${EC2_HOST} << 'EOF'
+          # Load the Docker images from the tar files
+          docker load -i ${EC2_DIR}/app.tar
+          docker load -i ${EC2_DIR}/chroma.tar
+          
+          # Optionally, you can run the containers here
+          # You might want to stop existing containers and remove them first
+          docker-compose down
+          docker-compose up -d
+          
+          # Clean up the tar files
+          rm -f ${EC2_DIR}/app.tar
+          rm -f ${EC2_DIR}/chroma.tar
+        EOF
