@@ -3,12 +3,12 @@ name: Build and Deploy to EC2
 on:
   push:
     branches:
-      - multi_type_support  # Change this to your default branch
+      - multi_type_support
 
 env:
   EC2_HOST: ec2-52-37-221-188.us-west-2.compute.amazonaws.com
   EC2_USER: ubuntu
-  EC2_KEY: ${{ secrets.EC2_KEY }}  # SSH private key
+  EC2_KEY: ${{ secrets.EC2_KEY }}
   EC2_DIR: ~/ai-bot/
 
 jobs:
@@ -22,10 +22,16 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
 
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+
     - name: Build Docker images using docker-compose
       run: |
-        # Build the images specified in the docker-compose.yml
-        docker-compose build
+        # Build the images with platform specification
+        DOCKER_BUILDKIT=1 docker-compose build --build-arg BUILDPLATFORM=linux/amd64 --build-arg TARGETPLATFORM=linux/amd64
+        # Tag images with platform-specific suffix
+        docker tag app:latest app:amd64
+        docker tag chroma:latest chroma:amd64
 
     - name: Save Docker images to tar
       run: |
