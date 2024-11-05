@@ -46,35 +46,48 @@ jobs:
         docker tag $APP_IMAGE ${APP_IMAGE}-amd64
         docker tag chromadb/chroma:latest chromadb/chroma:latest-amd64
 
-    - name: Save Docker images to tar
+    - name: Save and compress Docker images
       run: |
         # Get app image name from docker-compose
         APP_IMAGE=$(docker-compose config | grep 'image:' | head -n1 | awk '{print $2}')
-        # Save each built image to a tar file
-        docker save -o app.tar $APP_IMAGE
-        docker save -o chroma.tar chromadb/chroma:latest
+        # Save and compress each image
+        echo "Saving and compressing app image..."
+        docker save $APP_IMAGE | gzip > app.tar.gz
+        echo "Saving and compressing chroma image..."
+        docker save chromadb/chroma:latest | gzip > chroma.tar.gz
+        # Show file sizes
+        ls -lh *.tar.gz
 
     - name: Deploy to EC2
       run: |
         echo "${{ secrets.EC2_KEY }}" > ec2_key.pem
         chmod 600 ec2_key.pem
+        
+        echo "Creating directory on EC2..."
+        ssh -o StrictHostKeyChecking=no -i ec2_key.pem ${EC2_USER}@${EC2_HOST} "mkdir -p ${EC2_DIR}"
 
-        # Copy the tar files to the EC2 instance
-        scp -o StrictHostKeyChecking=no -i ec2_key.pem app.tar ${EC2_USER}@${EC2_HOST}:${EC2_DIR}/
-        scp -o StrictHostKeyChecking=no -i ec2_key.pem chroma.tar ${EC2_USER}@${EC2_HOST}:${EC2_DIR}/
+        echo "Copying app image to EC2..."
+        scp -o StrictHostKeyChecking=no -i ec2_key.pem app.tar.gz ${EC2_USER}@${EC2_HOST}:${EC2_DIR}/
+        echo "Copying chroma image to EC2..."
+        scp -o StrictHostKeyChecking=no -i ec2_key.pem chroma.tar.gz ${EC2_USER}@${EC2_HOST}:${EC2_DIR}/
 
-        # SSH into the EC2 instance and load the Docker images
+        echo "Loading images and starting containers on EC2..."
         ssh -o StrictHostKeyChecking=no -i ec2_key.pem ${EC2_USER}@${EC2_HOST} << 'EOF'
-          # Load the Docker images from the tar files
-          docker load -i ${EC2_DIR}/app.tar
-          docker load -i ${EC2_DIR}/chroma.tar
+          cd ${EC2_DIR}
+          echo "Stopping existing containers..."
+          docker-compose down || true
           
-          # Optionally, you can run the containers here
-          # You might want to stop existing containers and remove them first
-          docker-compose down
+          echo "Loading app image..."
+          gunzip -c app.tar.gz | docker load
+          echo "Loading chroma image..."
+          gunzip -c chroma.tar.gz | docker load
+          
+          echo "Starting containers..."
           docker-compose up -d
           
-          # Clean up the tar files
-          rm -f ${EC2_DIR}/app.tar
-          rm -f ${EC2_DIR}/chroma.tar
-        EOF
+          echo "Cleaning up..."
+          rm -f app.tar.gz chroma.tar.gz
+          
+          echo "Checking container status..."
+          docker ps
+EOF
