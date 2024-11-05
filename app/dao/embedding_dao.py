@@ -1,17 +1,13 @@
 # dao/embedding_dao.py
 import chromadb
-import os
 
 class EmbeddingDAO:
     def __init__(self):
-        # Connect to ChromaDB server
         self.client = chromadb.HttpClient(
-            host=os.getenv("CHROMA_HOST", "localhost"),
-            port=int(os.getenv("CHROMA_PORT", "8484"))
+            host="chroma",
+            port=8000
         )
-        
-        # Initialize ChromaDB client
-        self.collection = self.client.get_or_create_collection("client_collection")
+        self.collection = self.client.get_or_create_collection("embeddings")
 
     def store_embedding(self, metadatas, embedding, content, title):
         # Store embedding and content in ChromaDB

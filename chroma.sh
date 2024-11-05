@@ -1,1 +1,1 @@
-   chroma run --path $CHROMA_PERSISTANCE_PATH --port 8484
+   chroma run --path $CHROMA_PERSISTANCE_PATH --port 8000
