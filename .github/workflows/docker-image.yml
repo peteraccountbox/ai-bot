@@ -37,21 +37,21 @@ jobs:
         DOCKER_BUILDKIT=1 docker-compose build --build-arg BUILDPLATFORM=linux/amd64 --build-arg TARGETPLATFORM=linux/amd64
         # List images to verify they were built
         docker images
+        # Pull the Chroma image explicitly
+        docker pull chromadb/chroma:latest
         # Get the actual image names from docker-compose
         APP_IMAGE=$(docker-compose config | grep 'image:' | head -n1 | awk '{print $2}')
-        CHROMA_IMAGE=$(docker-compose config | grep 'image:' | tail -n1 | awk '{print $2}')
         # Tag images with platform-specific suffix
         docker tag $APP_IMAGE ${APP_IMAGE}-amd64
-        docker tag $CHROMA_IMAGE ${CHROMA_IMAGE}-amd64
+        docker tag chromadb/chroma:latest chromadb/chroma:latest-amd64
 
     - name: Save Docker images to tar
       run: |
-        # Get image names from docker-compose
+        # Get app image name from docker-compose
         APP_IMAGE=$(docker-compose config | grep 'image:' | head -n1 | awk '{print $2}')
-        CHROMA_IMAGE=$(docker-compose config | grep 'image:' | tail -n1 | awk '{print $2}')
         # Save each built image to a tar file
         docker save -o app.tar $APP_IMAGE
-        docker save -o chroma.tar $CHROMA_IMAGE
+        docker save -o chroma.tar chromadb/chroma:latest
 
     - name: Deploy to EC2
       run: |
