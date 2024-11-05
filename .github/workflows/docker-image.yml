@@ -58,18 +58,28 @@ jobs:
         # Show file sizes
         ls -lh *.tar.gz
 
-    - name: Deploy to EC2
+    - name: Install rsync
       run: |
+        sudo apt-get update
+        sudo apt-get install -y rsync
+
+    - name: Transfer images to EC2 with progress
+      timeout-minutes: 15
+      run: |
+        echo "Setting up SSH key..."
         echo "${{ secrets.EC2_KEY }}" > ec2_key.pem
         chmod 600 ec2_key.pem
         
         echo "Creating directory on EC2..."
         ssh -o StrictHostKeyChecking=no -i ec2_key.pem ${EC2_USER}@${EC2_HOST} "mkdir -p ${EC2_DIR}"
-
-        echo "Copying app image to EC2..."
-        scp -o StrictHostKeyChecking=no -i ec2_key.pem app.tar.gz ${EC2_USER}@${EC2_HOST}:${EC2_DIR}/
-        echo "Copying chroma image to EC2..."
-        scp -o StrictHostKeyChecking=no -i ec2_key.pem chroma.tar.gz ${EC2_USER}@${EC2_HOST}:${EC2_DIR}/
+        
+        echo "Transferring app image ..."
+        rsync -av --progress -e "ssh -i ec2_key.pem -o StrictHostKeyChecking=no" \
+          app.tar.gz ${EC2_USER}@${EC2_HOST}:${EC2_DIR}/
+        
+        echo "Transferring chroma image ..."
+        rsync -av --progress -e "ssh -i ec2_key.pem -o StrictHostKeyChecking=no" \
+          chroma.tar.gz ${EC2_USER}@${EC2_HOST}:${EC2_DIR}/
 
         echo "Loading images and starting containers on EC2..."
         ssh -o StrictHostKeyChecking=no -i ec2_key.pem ${EC2_USER}@${EC2_HOST} "
