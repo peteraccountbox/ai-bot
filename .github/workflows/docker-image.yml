@@ -63,41 +63,37 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y rsync
 
-    - name: Transfer images to EC2 with progress
-      timeout-minutes: 15
+    - name: Setup Docker permissions on EC2
       run: |
-        echo "Setting up SSH key..."
-        echo "${{ secrets.EC2_KEY }}" > ec2_key.pem
-        chmod 600 ec2_key.pem
-        
-        echo "Creating directory on EC2..."
-        ssh -o StrictHostKeyChecking=no -i ec2_key.pem ${EC2_USER}@${EC2_HOST} "mkdir -p ${EC2_DIR}"
-        
-        echo "Transferring app image ..."
-        rsync -av --progress -e "ssh -i ec2_key.pem -o StrictHostKeyChecking=no" \
-          app.tar.gz ${EC2_USER}@${EC2_HOST}:${EC2_DIR}/
-        
-        echo "Transferring chroma image ..."
-        rsync -av --progress -e "ssh -i ec2_key.pem -o StrictHostKeyChecking=no" \
-          chroma.tar.gz ${EC2_USER}@${EC2_HOST}:${EC2_DIR}/
+        ssh -o StrictHostKeyChecking=no -i ec2_key.pem ${EC2_USER}@${EC2_HOST} "
+          echo 'Setting up Docker permissions...'
+          # Add ubuntu user to docker group if not already added
+          sudo usermod -aG docker $USER
+          # Create docker.sock if it doesn't exist and set permissions
+          sudo chmod 666 /var/run/docker.sock
+          # Verify docker permissions
+          docker ps
+        "
 
-        echo "Loading images and starting containers on EC2..."
+    - name: Load and start containers
+      run: |
         ssh -o StrictHostKeyChecking=no -i ec2_key.pem ${EC2_USER}@${EC2_HOST} "
           cd ${EC2_DIR}
+          
           echo 'Stopping existing containers...'
-          docker-compose down || true
+          sudo docker-compose down || true
           
           echo 'Loading app image...'
-          gunzip -c app.tar.gz | docker load
+          sudo gunzip -c app.tar.gz | sudo docker load
           echo 'Loading chroma image...'
-          gunzip -c chroma.tar.gz | docker load
+          sudo gunzip -c chroma.tar.gz | sudo docker load
           
           echo 'Starting containers...'
-          docker-compose up -d
+          sudo docker-compose up -d
+          
+          echo 'Checking container status...'
+          sudo docker ps
           
           echo 'Cleaning up...'
           rm -f app.tar.gz chroma.tar.gz
-          
-          echo 'Checking container status...'
-          docker ps
         "
