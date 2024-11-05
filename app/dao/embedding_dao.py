@@ -1,28 +1,21 @@
 # dao/embedding_dao.py
 import chromadb
-import os
-import logging
-
-logger = logging.getLogger(__name__)
 
 class EmbeddingDAO:
     def __init__(self):
-        # Connect to ChromaDB server
         self.client = chromadb.HttpClient(
-            host=os.getenv("CHROMA_HOST", "localhost"),
-            port=int(os.getenv("CHROMA_PORT", "8484"))
+            host="chroma",
+            port=8000
         )
-        
-        # Initialize ChromaDB client
-        self.collection = self.client.get_or_create_collection("client_collection")
+        self.collection = self.client.get_or_create_collection("embeddings")
 
-    def store_embedding(self, url, embedding, content):
+    def store_embedding(self, metadatas, embedding, content, title):
         # Store embedding and content in ChromaDB
         self.collection.add(
             documents=[content],
-            metadatas=[{"url": url}],
+            metadatas=metadatas,
             embeddings=[embedding],
-            ids=[url]  # For single vector
+            ids=[title]
         )
 
     def query_embedding(self, embedding, n_results=10):

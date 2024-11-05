@@ -3,21 +3,39 @@
 from app.utils.scraping_utils import WebScraper
 from openai import OpenAI
 from app.dao.embedding_dao import EmbeddingDAO
+from app.models.schemas import TrainRequest, ContentType
+from typing import Optional
+from app.utils.file_extractor import FileExtractor
 
 class EmbeddingService:
     def __init__(self):
         self.client = OpenAI()
         self.embedding_dao = EmbeddingDAO()
         self.scraper = WebScraper()
+        self.file_extractor = FileExtractor()
 
-    def process_url(self, url: str):
+    async def process_payload(self, request: TrainRequest):
         # Get content
-        content = self.scraper.scrape_url(url)
+        if request.type == ContentType.URL:
+            content = self.scraper.scrape_url(request.content)
+        elif request.type == ContentType.FILE:
+            content = await self.file_extractor.extract_text_from_url(request.content)
+        else:
+            content = self.scraper.extract_text_from_html(request.content)
     
         # Generate embedding
         embedding = self.generate_embedding(content)
         
-        return self.embedding_dao.store_embedding(url, embedding, content)
+        # Store metadata
+        metadatas = [
+            {
+                "url": request.content if request.type in (ContentType.URL, ContentType.FILE) else request.title,
+                "title": request.title,
+                "type": request.type.value
+            }
+        ]
+
+        return self.embedding_dao.store_embedding(metadatas, embedding, content, request.title)
 
     def generate_embedding(self, text):
         # Generate embeddings using OpenAI's `text-embedding-ada-002`
