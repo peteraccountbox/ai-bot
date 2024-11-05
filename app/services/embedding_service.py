@@ -29,13 +29,13 @@ class EmbeddingService:
         # Store metadata
         metadatas = [
             {
-                "url": request.content if request.type in (ContentType.URL, ContentType.FILE) else request.title,
-                "title": request.title,
+                "url": request.content if request.type in (ContentType.URL, ContentType.FILE) else request.id,
+                "id": request.id,
                 "type": request.type.value
             }
         ]
 
-        return self.embedding_dao.store_embedding(metadatas, embedding, content, request.title)
+        return self.embedding_dao.store_embedding(metadatas, embedding, content, request.id)
 
     def generate_embedding(self, text):
         # Generate embeddings using OpenAI's `text-embedding-ada-002`
@@ -75,7 +75,7 @@ class EmbeddingService:
         response = self.client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You're EngageBay's multilingual CRM assistant. Detect the language of the question and respond in the same language. Answer in bullet points, max 2 sentences per point."},
+                {"role": "system", "content": "You're EngageBay's CRM assistant. Detect the language of the question and respond in the same language. Answer in bullet points, max 20 sentences per point."},
                 {"role": "user", "content": f"Context: {combined_context}\n\nQuestion: {user_input}\n\nAnswer from context only, in the same language as the question."}
             ],
             temperature=0.7,
