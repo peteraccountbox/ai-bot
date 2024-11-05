@@ -58,26 +58,29 @@ jobs:
         # Show file sizes
         ls -lh *.tar.gz
 
-    - name: Install rsync
+    - name: Setup SSH key
       run: |
-        sudo apt-get update
-        sudo apt-get install -y rsync
+        # Create .ssh directory
+        mkdir -p ~/.ssh
+        # Write the private key to a file
+        echo "${{ secrets.EC2_KEY }}" > ~/.ssh/ec2_key.pem
+        # Set correct permissions
+        chmod 600 ~/.ssh/ec2_key.pem
+        # Debug: Check if file exists and has correct permissions
+        ls -la ~/.ssh/ec2_key.pem
 
     - name: Setup Docker permissions on EC2
       run: |
-        ssh -o StrictHostKeyChecking=no -i ec2_key.pem ${EC2_USER}@${EC2_HOST} "
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "
           echo 'Setting up Docker permissions...'
-          # Add ubuntu user to docker group if not already added
           sudo usermod -aG docker $USER
-          # Create docker.sock if it doesn't exist and set permissions
           sudo chmod 666 /var/run/docker.sock
-          # Verify docker permissions
           docker ps
         "
 
     - name: Load and start containers
       run: |
-        ssh -o StrictHostKeyChecking=no -i ec2_key.pem ${EC2_USER}@${EC2_HOST} "
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "
           cd ${EC2_DIR}
           
           echo 'Stopping existing containers...'
