@@ -1,6 +1,9 @@
 # dao/embedding_dao.py
 import chromadb
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 class EmbeddingDAO:
     def __init__(self):
@@ -30,3 +33,12 @@ class EmbeddingDAO:
         )
 
         return result
+
+    def delete_by_url(self, url: str) -> bool:
+        # Delete entries where metadata.url matches the given url
+        self.collection.delete(
+            where={"url": url}
+        )
+
+        return True
+       
