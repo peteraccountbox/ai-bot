@@ -1,11 +1,11 @@
 # dao/embedding_dao.py
 import chromadb
-
+import os
 class EmbeddingDAO:
     def __init__(self):
         self.client = chromadb.HttpClient(
-            host="chroma",
-            port=8000
+            host=os.getenv("CHROMA_HOST"),
+            port=os.getenv("CHROMA_PORT")
         )
         self.collection = self.client.get_or_create_collection("embeddings")
 
@@ -27,11 +27,12 @@ class EmbeddingDAO:
 
         return result
 
-    def delete_by_url(self, url: str) -> bool:
-        # Delete entries where metadata.url matches the given url
-        self.collection.delete(
-            where={"url": url}
-        )
+    def delete_collection(self, collection_name: str) -> bool:
+        # Check if collection exists
+        if collection_name in [col.name for col in self.client.list_collections()]:
+            self.client.delete_collection(collection_name)
+            return True
+        
+        return False
 
-        return True
        

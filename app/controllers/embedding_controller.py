@@ -28,3 +28,13 @@ async def retrieve_answer(request: QueryRequest):
         return {"message": "No relevant content found"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/reset/collection/{collection_name}")
+async def delete_collection(collection_name: str):
+    try:
+        success = embedding_service.delete_collection(collection_name)
+        if success:
+            return {"message": f"Collection '{collection_name}' deleted successfully"}
+        return {"message": f"Collection '{collection_name}' not found"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

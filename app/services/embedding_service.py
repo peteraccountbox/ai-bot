@@ -92,3 +92,6 @@ class EmbeddingService:
                 "context_length": len(combined_context)
             }
         }
+
+    def delete_collection(self, collection_name: str) -> bool:
+        return self.embedding_dao.delete_collection(collection_name)
