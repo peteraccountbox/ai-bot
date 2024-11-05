@@ -10,6 +10,7 @@ env:
   EC2_USER: ubuntu
   EC2_KEY: ${{ secrets.EC2_KEY }}
   EC2_DIR: ~/ai-bot/
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
 jobs:
   build:
