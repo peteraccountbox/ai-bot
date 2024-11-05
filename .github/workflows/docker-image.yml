@@ -72,22 +72,22 @@ jobs:
         scp -o StrictHostKeyChecking=no -i ec2_key.pem chroma.tar.gz ${EC2_USER}@${EC2_HOST}:${EC2_DIR}/
 
         echo "Loading images and starting containers on EC2..."
-        ssh -o StrictHostKeyChecking=no -i ec2_key.pem ${EC2_USER}@${EC2_HOST} << 'EOF'
+        ssh -o StrictHostKeyChecking=no -i ec2_key.pem ${EC2_USER}@${EC2_HOST} "
           cd ${EC2_DIR}
-          echo "Stopping existing containers..."
+          echo 'Stopping existing containers...'
           docker-compose down || true
           
-          echo "Loading app image..."
+          echo 'Loading app image...'
           gunzip -c app.tar.gz | docker load
-          echo "Loading chroma image..."
+          echo 'Loading chroma image...'
           gunzip -c chroma.tar.gz | docker load
           
-          echo "Starting containers..."
+          echo 'Starting containers...'
           docker-compose up -d
           
-          echo "Cleaning up..."
+          echo 'Cleaning up...'
           rm -f app.tar.gz chroma.tar.gz
           
-          echo "Checking container status..."
+          echo 'Checking container status...'
           docker ps
-EOF
+        "
