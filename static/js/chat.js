@@ -46,13 +46,26 @@ function appendMessage(messageData, type) {
             sourcesContainer.append(sourcesTitle);
 
             relevantSources.forEach(source => {
-                const similarity = parseFloat(source.similarity.replace('%', '')).toFixed(1);
-                const sourceLink = $('<a>')
-                    .addClass('source-capsule')
-                    .attr('href', source.url)
-                    .attr('target', '_blank')
-                    .html(`${new URL(source.url).hostname.replace('www.', '')} <span class="similarity">${similarity}%</span>`);
-                sourcesContainer.append(sourceLink);
+                try {
+                    const similarity = parseFloat(source.similarity.replace('%', '')).toFixed(1);
+                    let hostname = source.url;
+
+                    // Safely parse URL
+                    try {
+                        hostname = new URL(source.url).hostname.replace('www.', '');
+                    } catch (e) {
+                        console.warn('Invalid URL:', source.url);
+                    }
+
+                    const sourceLink = $('<a>')
+                        .addClass('source-capsule')
+                        .attr('href', source.url)
+                        .attr('target', '_blank')
+                        .html(`${hostname} <span class="similarity">${similarity}%</span>`);
+                    sourcesContainer.append(sourceLink);
+                } catch (e) {
+                    console.error('Error processing source:', source, e);
+                }
             });
 
             messageDiv.append(sourcesContainer);
