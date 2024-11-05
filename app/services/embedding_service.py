@@ -23,6 +23,8 @@ class EmbeddingService:
         else:
             content = self.scraper.extract_text_from_html(request.content)
     
+        print(content)
+
         # Generate embedding
         embedding = self.generate_embedding(content)
         

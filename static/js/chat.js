@@ -83,6 +83,8 @@ function sendMessage() {
     const userInput = $('#user-input');
     const message = userInput.val().trim();
 
+    const indexName = window.location.pathname.split('/').pop();
+
     if (message) {
         // Remove welcome message if it exists
         $('.welcome-message').remove();
@@ -96,7 +98,7 @@ function sendMessage() {
 
         // Send to your API endpoint
         $.ajax({
-            url: '/api/v1/answer',
+            url: `/api/v1/${indexName}/answer`,
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
