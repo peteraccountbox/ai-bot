@@ -80,22 +80,31 @@ jobs:
 
     - name: Load and start containers
       run: |
-        # First, transfer the Docker images
-        echo "Transferring Docker images to EC2..."
-        scp -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem app.tar.gz ${EC2_USER}@${EC2_HOST}:${EC2_DIR}
-        scp -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem chroma.tar.gz ${EC2_USER}@${EC2_HOST}:${EC2_DIR}
-
-        # Then connect and load the images
+        # Use a single SSH session for all operations
         ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "
           cd ${EC2_DIR}
-
+          
           echo 'Stopping existing containers...'
           sudo docker-compose down || true
           
-          echo 'Loading app image...'
-          sudo gunzip -c app.tar.gz | sudo docker load
-          echo 'Loading chroma image...'
-          sudo gunzip -c chroma.tar.gz | sudo docker load
+          # Clean up any existing tar files
+          rm -f app.tar.gz chroma.tar.gz
+        " 
+
+        # Transfer files in parallel using background processes
+        echo "Transferring Docker images to EC2..."
+        scp -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem app.tar.gz ${EC2_USER}@${EC2_HOST}:${EC2_DIR} &
+        scp -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem chroma.tar.gz ${EC2_USER}@${EC2_HOST}:${EC2_DIR} &
+        wait # Wait for all background transfers to complete
+
+        # Continue with loading and starting containers
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "
+          cd ${EC2_DIR}
+          
+          echo 'Loading images...'
+          sudo gunzip -c app.tar.gz | sudo docker load &
+          sudo gunzip -c chroma.tar.gz | sudo docker load &
+          wait
           
           echo 'Starting containers...'
           sudo docker-compose up -d
