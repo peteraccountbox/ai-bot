@@ -5,8 +5,8 @@ RUN apt-get update && \
     apt-get install -y python3.11 python3-pip curl sqlite3 && \
     rm -rf /var/lib/apt/lists/*
 
-# Set working directory to the parent folder that contains both main.py and app/
-WORKDIR /workspace
+# Set working directory to root where main.py is located
+WORKDIR /app
 
 COPY requirements.txt .
 
@@ -14,8 +14,11 @@ COPY requirements.txt .
 RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir -r requirements.txt
 
-# Copy everything to the workspace
+# Copy everything to the current directory
 COPY . .
+
+# Debug commands (optional, remove in production)
+RUN pwd && ls -la
 
 EXPOSE 8181
 
