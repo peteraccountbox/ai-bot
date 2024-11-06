@@ -82,7 +82,6 @@ jobs:
       run: |
         ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "
           cd ${EC2_DIR}
-          
           echo 'Stopping existing containers...'
           sudo docker-compose down || true
           
