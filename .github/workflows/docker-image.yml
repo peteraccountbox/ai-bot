@@ -83,10 +83,19 @@ jobs:
         # Install pv for progress monitoring
         sudo apt-get update && sudo apt-get install -y pv
 
-        # Transfer files using pv with progress
-        echo "Transferring Docker images to EC2..."
-        pv app.tar.gz | ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "sudo tee ${EC2_DIR}/app.tar.gz > /dev/null"
-        pv chroma.tar.gz | ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "sudo tee ${EC2_DIR}/chroma.tar.gz > /dev/null"
+        # Get total size for percentage calculation
+        echo "Calculating file sizes..."
+        APP_SIZE=$(stat -f%z app.tar.gz)
+        CHROMA_SIZE=$(stat -f%z chroma.tar.gz)
+        echo "App image size: $(numfmt --to=iec-i --suffix=B ${APP_SIZE})"
+        echo "Chroma image size: $(numfmt --to=iec-i --suffix=B ${CHROMA_SIZE})"
+
+        # Transfer files with progress
+        echo "Transferring app.tar.gz..."
+        pv -s ${APP_SIZE} app.tar.gz | ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "sudo tee ${EC2_DIR}/app.tar.gz > /dev/null"
+        
+        echo "Transferring chroma.tar.gz..."
+        pv -s ${CHROMA_SIZE} chroma.tar.gz | ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "sudo tee ${EC2_DIR}/chroma.tar.gz > /dev/null"
 
         ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "
           cd ${EC2_DIR}
