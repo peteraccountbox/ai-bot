@@ -97,3 +97,7 @@ class EmbeddingService:
 
     def delete_collection(self, collection_name: str) -> bool:
         return self.embedding_dao.delete_collection(collection_name)
+
+    def delete_document(self, doc_id: str) -> bool:
+        """Delete a specific document by ID"""
+        return self.embedding_dao.delete_document(doc_id)

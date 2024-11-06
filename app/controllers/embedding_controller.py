@@ -57,3 +57,17 @@ async def reset_database(
         return {"message": "Failed to clear database"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/{index_name}/document")
+async def delete_document(
+    index_name: str,
+    request: TrainRequest,
+    _: None = Depends(set_index_context)
+):
+    try:
+        success = embedding_service.delete_document(request.id)
+        if success:
+            return {"message": f"Document {request.id} deleted successfully from {index_name}"}
+        return {"message": f"Document {request.id} not found in {index_name}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -40,4 +40,14 @@ class EmbeddingDAO:
         
         return False
 
+    def delete_document(self, doc_id: str) -> bool:
+        """Delete a specific document by ID from the collection"""
+        collection = self._get_collection()
+        # ChromaDB delete by IDs
+        collection.delete(
+            ids=[doc_id]
+        )
+        return True
+       
+
        
