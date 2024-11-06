@@ -17,10 +17,6 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
 # Copy everything to the workspace
 COPY . .
 
-# Verify the file exists and set permissions
-RUN ls -la && \
-    chmod +x main.py
-
 EXPOSE 8080
 
 # Add python path to ensure app module can be found
