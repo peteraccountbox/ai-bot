@@ -80,32 +80,37 @@ jobs:
 
     - name: Load and start containers
       run: |
-        # Install pv for progress monitoring
-        sudo apt-get update && sudo apt-get install -y pv
+        # Install required tools
+        sudo apt-get update && sudo apt-get install -y pv parallel
 
-        # Get total size for percentage calculation
-        echo "Calculating file sizes..."
-        APP_SIZE=$(stat -c%s app.tar.gz)
-        CHROMA_SIZE=$(stat -c%s chroma.tar.gz)
-        echo "App image size: $(numfmt --to=iec-i --suffix=B ${APP_SIZE})"
-        echo "Chroma image size: $(numfmt --to=iec-i --suffix=B ${CHROMA_SIZE})"
+        # Create directory for split files
+        mkdir splits
 
-        # Transfer files with progress
-        echo "Transferring app.tar.gz..."
-        pv -s ${APP_SIZE} app.tar.gz | ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "sudo tee ${EC2_DIR}/app.tar.gz > /dev/null"
-        
-        echo "Transferring chroma.tar.gz..."
-        pv -s ${CHROMA_SIZE} chroma.tar.gz | ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "sudo tee ${EC2_DIR}/chroma.tar.gz > /dev/null"
+        # Split files into 50MB chunks
+        echo "Splitting files into chunks..."
+        split -b 50M app.tar.gz splits/app_
+        split -b 50M chroma.tar.gz splits/chroma_
 
+        # Create remote directory for splits
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "mkdir -p ${EC2_DIR}/splits"
+
+        # Transfer splits in parallel (8 concurrent transfers)
+        echo "Transferring splits in parallel..."
+        ls splits/* | parallel -j 8 scp -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem {} ${EC2_USER}@${EC2_HOST}:${EC2_DIR}/splits/
+
+        # Reassemble and load images on EC2
         ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "
           cd ${EC2_DIR}
+          
+          echo 'Reassembling files...'
+          cat splits/app_* > app.tar.gz
+          cat splits/chroma_* > chroma.tar.gz
           
           echo 'Stopping existing containers...'
           sudo docker-compose down || true
           
-          echo 'Loading app image...'
+          echo 'Loading images...'
           sudo docker load < app.tar.gz
-          echo 'Loading chroma image...'
           sudo docker load < chroma.tar.gz
           
           echo 'Starting containers...'
@@ -115,5 +120,5 @@ jobs:
           sudo docker ps
           
           echo 'Cleaning up...'
-          rm -f app.tar.gz chroma.tar.gz
+          rm -rf splits app.tar.gz chroma.tar.gz
         "
