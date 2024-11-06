@@ -17,6 +17,8 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
 # Copy everything to the workspace
 COPY . .
 
+COPY app/main.py .
+
 EXPOSE 8181
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8181"]
