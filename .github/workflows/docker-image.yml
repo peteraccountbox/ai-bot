@@ -102,10 +102,13 @@ jobs:
           echo 'Stopping existing containers...'
           sudo docker-compose down || true
           
+          echo 'Pulling Chroma image...'
+          sudo docker pull chromadb/chroma:latest
+          
           echo 'Loading app image...'
           sudo docker load < app.tar.gz
           
-          echo 'Starting containers (will pull Chroma from Docker Hub)...'
+          echo 'Starting containers...'
           sudo docker-compose up -d
           
           echo 'Checking container status...'
