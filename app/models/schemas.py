@@ -13,13 +13,13 @@ class QueryRequest(BaseModel):
 class TrainRequest(BaseModel):
     type: ContentType
     content: str
-    title: str
+    id: str
     
     class Config:
         json_schema_extra = {
             "example": {
                 "type": "URL",
                 "content": "https://example.com",
-                "title": "My Document Title"
+                "id": "My Document ID"
             }
         }

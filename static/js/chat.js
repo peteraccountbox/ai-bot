@@ -46,13 +46,26 @@ function appendMessage(messageData, type) {
             sourcesContainer.append(sourcesTitle);
 
             relevantSources.forEach(source => {
-                const similarity = parseFloat(source.similarity.replace('%', '')).toFixed(1);
-                const sourceLink = $('<a>')
-                    .addClass('source-capsule')
-                    .attr('href', source.url)
-                    .attr('target', '_blank')
-                    .html(`${new URL(source.url).hostname.replace('www.', '')} <span class="similarity">${similarity}%</span>`);
-                sourcesContainer.append(sourceLink);
+                try {
+                    const similarity = parseFloat(source.similarity.replace('%', '')).toFixed(1);
+                    let hostname = source.url;
+
+                    // Safely parse URL
+                    try {
+                        hostname = new URL(source.url).hostname.replace('www.', '');
+                    } catch (e) {
+                        console.warn('Invalid URL:', source.url);
+                    }
+
+                    const sourceLink = $('<a>')
+                        .addClass('source-capsule')
+                        .attr('href', source.url)
+                        .attr('target', '_blank')
+                        .html(`${hostname} <span class="similarity">${similarity}%</span>`);
+                    sourcesContainer.append(sourceLink);
+                } catch (e) {
+                    console.error('Error processing source:', source, e);
+                }
             });
 
             messageDiv.append(sourcesContainer);
@@ -70,6 +83,8 @@ function sendMessage() {
     const userInput = $('#user-input');
     const message = userInput.val().trim();
 
+    const indexName = window.location.pathname.split('/').pop();
+
     if (message) {
         // Remove welcome message if it exists
         $('.welcome-message').remove();
@@ -83,7 +98,7 @@ function sendMessage() {
 
         // Send to your API endpoint
         $.ajax({
-            url: '/api/v1/answer',
+            url: `/api/v1/${indexName}/answer`,
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
