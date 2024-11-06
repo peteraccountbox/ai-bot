@@ -80,9 +80,13 @@ jobs:
 
     - name: Load and start containers
       run: |
-        # Transfer files using rsync
+        # Install pv for progress monitoring
+        sudo apt-get update && sudo apt-get install -y pv
+
+        # Transfer files using rsync with progress
         echo "Transferring Docker images to EC2..."
-        rsync -avz -e "ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem" app.tar.gz chroma.tar.gz ${EC2_USER}@${EC2_HOST}:${EC2_DIR}
+        pv app.tar.gz | ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "cat > ${EC2_DIR}/app.tar.gz"
+        pv chroma.tar.gz | ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "cat > ${EC2_DIR}/chroma.tar.gz"
 
         # Single SSH session for container operations
         ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "
