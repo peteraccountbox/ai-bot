@@ -120,7 +120,4 @@ jobs:
           
           echo 'Checking container status...'
           sudo docker ps
-          
-          echo 'Cleaning up...'
-          rm -rf splits app.tar.gz
         "

@@ -19,7 +19,4 @@ COPY . .
 
 EXPOSE 8080
 
-# Add python path to ensure app module can be found
-ENV PYTHONPATH=/workspace
-
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
