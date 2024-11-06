@@ -80,6 +80,14 @@ jobs:
 
     - name: Load and start containers
       run: |
+        # Install pv for progress monitoring
+        sudo apt-get update && sudo apt-get install -y pv
+
+        # Transfer files using pv with progress
+        echo "Transferring Docker images to EC2..."
+        pv app.tar.gz | ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "sudo tee ${EC2_DIR}/app.tar.gz > /dev/null"
+        pv chroma.tar.gz | ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "sudo tee ${EC2_DIR}/chroma.tar.gz > /dev/null"
+
         ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "
           cd ${EC2_DIR}
           
@@ -87,9 +95,9 @@ jobs:
           sudo docker-compose down || true
           
           echo 'Loading app image...'
-          sudo gunzip -c app.tar.gz | sudo docker load
+          sudo docker load < app.tar.gz
           echo 'Loading chroma image...'
-          sudo gunzip -c chroma.tar.gz | sudo docker load
+          sudo docker load < chroma.tar.gz
           
           echo 'Starting containers...'
           sudo docker-compose up -d
@@ -98,5 +106,5 @@ jobs:
           sudo docker ps
           
           echo 'Cleaning up...'
-          # rm -f app.tar.gz chroma.tar.gz
+          rm -f app.tar.gz chroma.tar.gz
         "
