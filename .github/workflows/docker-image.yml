@@ -34,6 +34,9 @@ jobs:
 
     - name: Build Docker images using docker-compose
       run: |
+        # Pull Chroma image first
+        docker pull ghcr.io/chroma-core/chroma:latest
+        
         # Build the images with platform specification
         DOCKER_BUILDKIT=1 docker-compose build --build-arg BUILDPLATFORM=linux/amd64 --build-arg TARGETPLATFORM=linux/amd64
         # List images to verify they were built
