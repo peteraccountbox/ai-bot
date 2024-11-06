@@ -85,8 +85,8 @@ jobs:
 
         # Get total size for percentage calculation
         echo "Calculating file sizes..."
-        APP_SIZE=$(stat -f%z app.tar.gz)
-        CHROMA_SIZE=$(stat -f%z chroma.tar.gz)
+        APP_SIZE=$(stat -c%s app.tar.gz)
+        CHROMA_SIZE=$(stat -c%s chroma.tar.gz)
         echo "App image size: $(numfmt --to=iec-i --suffix=B ${APP_SIZE})"
         echo "Chroma image size: $(numfmt --to=iec-i --suffix=B ${CHROMA_SIZE})"
 
