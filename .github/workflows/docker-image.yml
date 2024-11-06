@@ -116,8 +116,11 @@ jobs:
           sudo docker load < app.tar.gz
           
           echo 'Starting containers fresh...'
+          sudo ls -la
+          sudo docker-compose config
           sudo docker-compose up -d
           
-          echo 'Checking container status...'
+          echo 'Checking container status and logs...'
           sudo docker ps
+          sudo docker-compose logs app
         "
