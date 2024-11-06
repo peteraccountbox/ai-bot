@@ -80,6 +80,12 @@ jobs:
 
     - name: Load and start containers
       run: |
+        # First, transfer the Docker images
+        echo "Transferring Docker images to EC2..."
+        scp -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem app.tar.gz ${EC2_USER}@${EC2_HOST}:${EC2_DIR}
+        scp -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem chroma.tar.gz ${EC2_USER}@${EC2_HOST}:${EC2_DIR}
+
+        # Then connect and load the images
         ssh -o StrictHostKeyChecking=no -i ~/.ssh/ec2_key.pem ${EC2_USER}@${EC2_HOST} "
           cd ${EC2_DIR}
 
