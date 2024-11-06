@@ -98,5 +98,5 @@ jobs:
           sudo docker ps
           
           echo 'Cleaning up...'
-          rm -f app.tar.gz chroma.tar.gz
+          # rm -f app.tar.gz chroma.tar.gz
         "
