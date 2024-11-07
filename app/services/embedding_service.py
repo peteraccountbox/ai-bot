@@ -87,8 +87,8 @@ class EmbeddingService:
                         "role": "user",
                         "content": (
                             f"Context: {combined_context}\n\n"
-            f"Question: {user_input}\n\n"
-            "Answer using only the context, in the same language."
+                            f"Question: {user_input}\n\n"
+                            "Answer using only the context, in the same language."
                         )
                     }
             ],
