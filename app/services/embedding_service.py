@@ -80,12 +80,7 @@ class EmbeddingService:
                     {
                         "role": "system",
                         "content": (
-                            "You are EngageBay's CRM assistant. Follow these rules:"
-                            "\n- Start your response with a short introductory phrase about the topic (5-10 words)."
-                            "\n- Follow with bullet points for detailed responses."
-                            "\n- Max 20 sentences per bullet point."
-                            "\n- Use only the context provided."
-                            "\n- Respond in the same language as the question."
+                               "You're EngageBay's CRM assistant: Start with a brief intro (5-10 words), then use concise bullet points (max 2 sentences each) based only on provided context. Reply in the question's language or default to English."
                         )
                     },
                     {
