@@ -35,13 +35,20 @@ class EmbeddingService:
         )
 
         # Your original system message
-        system_message = """You're EngageBay's CRM assistant: Start with a brief intro (5-10 words), then use concise bullet points (max 2 sentences each) based only on provided context. Reply in the question's language or default to English."""
+        system_message = """You're EngageBay's CRM assistant: Start with a brief intro (5-10 words), then use concise bullet points (max 2 sentences each) based on provided context and memory. Incorporate relevant details from prior conversations stored in memory where applicable. Reply in the question's language or default to English."""
+        # system_message = """You're EngageBay's CRM assistant: Start with a brief intro (5-10 words), then use concise bullet points (max 2 sentences each) based only on provided context. Reply in the question's language or default to English."""
 
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", system_message),
             MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "Context: {context}\n\nQuestion: {input}\n\nAnswer from context only, in the same language as the question.")
+            ("human", "Context: {context}\n\nQuestion: {input}\n\nAnswer based on both memory and context, in the same language as the question.")
         ])
+        
+        # self.prompt = ChatPromptTemplate.from_messages([
+        #     ("system", system_message),
+        #     MessagesPlaceholder(variable_name="chat_history"),
+        #     ("human", "Context: {context}\n\nQuestion: {input}\n\nAnswer from context only, in the same language as the question.")
+        # ])
 
         self.memory_service = MemoryService()
 
@@ -80,7 +87,7 @@ class EmbeddingService:
             llm=self.chat_model,
             prompt=self.prompt,
             memory=memory,
-            verbose=False
+            verbose=True
         )
         return conversation_id, chain
 
@@ -141,10 +148,13 @@ class EmbeddingService:
 
         # Create chain with conversation memory
         conversation_id, chain = self.create_chain(conversation_id)
-        
+
+        #memory_context = " ".join(chat_history)
+
         # Run the chain
         response = chain.run(
             context=combined_context,
+            #memory=memory_context,
             input=user_input
         )
 
