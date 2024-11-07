@@ -48,6 +48,22 @@ class EmbeddingDAO:
             ids=[doc_id]
         )
         return True
-       
+
+    def get_collection_info(self):
+        """Get information about the current collection"""
+        collection = self._get_collection()
+        return {
+            "name": collection.name,
+            "count": collection.count()
+        }
+
+    def get_similar_documents(self, query_embedding, n_results=10):
+        """Get similar documents using embeddings"""
+        collection = self._get_collection()
+        return collection.query(
+            query_embeddings=[query_embedding],
+            n_results=n_results,
+            include=["documents", "metadatas", "distances"]
+        )
 
        
