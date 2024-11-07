@@ -29,7 +29,7 @@ function appendMessage(messageData, type) {
 
     if (type === 'bot') {
         // Add the answer text
-        const answerText = $('<div>').addClass('answer-text').text(messageData.answer.answer);
+        const answerText = $('<div>').addClass('answer-text').html(messageData.answer.answer_html || messageData.answer.answer);
         messageDiv.append(answerText);
 
         // Filter and sort sources

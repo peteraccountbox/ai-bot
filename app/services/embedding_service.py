@@ -76,21 +76,32 @@ class EmbeddingService:
 
         response = self.client.chat.completions.create(
             model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You're EngageBay's CRM assistant. Detect the language of the question and respond in the same language. Answer in bullet points, max 20 sentences per point."},
-                {"role": "user", "content": f"Context: {combined_context}\n\nQuestion: {user_input}\n\nAnswer from context only, in the same language as the question."}
+            messages = [
+                    {
+                        "role": "system",
+                        "content": (
+                               "You're EngageBay's CRM assistant: Start with a brief intro (5-10 words), then use concise bullet points (max 2 sentences each) based only on provided context. Reply in the question's language or default to English."
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Context: {combined_context}\n\n"
+            f"Question: {user_input}\n\n"
+            "Answer using only the context, in the same language."
+                        )
+                    }
             ],
             temperature=0.7,
             #max_tokens=3
         )
 
-        # Return both the answer and sources
         return {
-            "answer": response.choices[0].message.content.strip(),
+            "answer": response.choices[0].message.content.strip(),    
             "sources": sources,
             "metadata": {
                 "total_sources": len(sources),
-                "model_used": "gpt-4",
+                "model_used": "gpt-4o",
                 "context_length": len(combined_context)
             }
         }
