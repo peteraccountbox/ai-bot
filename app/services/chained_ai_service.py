@@ -1,13 +1,17 @@
 from langchain.memory import ConversationBufferWindowMemory
 from langchain.embeddings import OpenAIEmbeddings
-from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI
 from langchain.chains import ConversationalRetrievalChain
-from langchain.prompts import SystemMessagePromptTemplate, HumanMessagePromptTemplate, ChatPromptTemplate
-from langchain.schema import Document
+from langchain.prompts import SystemMessagePromptTemplate, HumanMessagePromptTemplate, ChatPromptTemplate, PromptTemplate
+from langchain.schema import Document, BaseRetriever
 from app.dao.embedding_dao import EmbeddingDAO
+from app.services.embedding_service import EmbeddingService
 import uuid
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from datetime import datetime
+from pydantic import Field
+
+embedding_service = EmbeddingService()
 
 class ChainedAIService:
     _instance = None
@@ -32,14 +36,18 @@ class ChainedAIService:
 
     def _create_retriever(self):
         """Create a custom retriever that uses EmbeddingDAO"""
-        class CustomRetriever:
+        class CustomRetriever(BaseRetriever):
+            embedding_dao: Any = Field(default=None)
+            embeddings: Any = Field(default=None)
+
             def __init__(self, embedding_dao, embeddings):
+                super().__init__()
                 self.embedding_dao = embedding_dao
                 self.embeddings = embeddings
 
-            async def aget_relevant_documents(self, query: str):
+            def _get_relevant_documents(self, query: str):
                 # Get embedding for query
-                query_embedding = self.embeddings.embed_query(query)
+                query_embedding = embedding_service.generate_embedding(query)
                 
                 # Query the embedding dao
                 results = self.embedding_dao.query_embedding([query_embedding])
@@ -53,11 +61,18 @@ class ChainedAIService:
                         metadata=metadata
                     ))
                 
+                # If no documents found, return a document that explicitly states this
+                if not documents:
+                    documents = [Document(
+                        page_content="NO_RELEVANT_CONTEXT",
+                        metadata={"error": "no_context"}
+                    )]
+                
                 return documents
 
-            def get_relevant_documents(self, query: str):
-                # Synchronous version if needed
-                raise NotImplementedError("Please use async version")
+            def _aget_relevant_documents(self, query: str):
+                # Async version if needed
+                raise NotImplementedError("Please use sync version")
 
         return CustomRetriever(self.embedding_dao, self.embeddings)
 
@@ -110,20 +125,35 @@ class ChainedAIService:
         ])
         return chat_prompt
 
-    async def get_structured_answer(self, question: str, memory_id: str = None) -> Dict[str, Any]:
+    def get_structured_answer(self, query: str, memory_id: Optional[str] = None) -> Dict[str, Any]:
         # Get or create memory
         memory, current_memory_id = self._get_or_create_memory(memory_id)
+
+        # Define your prompt template with stricter instructions
+        prompt_template = PromptTemplate(
+            input_variables=["context", "question"],
+            template="""You must ONLY answer based on the provided context. If the context contains 'NO_RELEVANT_CONTEXT' or if you cannot find a specific answer in the context, respond with "I cannot answer this question based on the available context." Do not use any external knowledge.
+
+Context:
+{context}
+
+Question: {question}
+
+Answer: """
+        )
 
         # Create conversation chain with custom retriever
         qa_chain = ConversationalRetrievalChain.from_llm(
             llm=self.llm,
             retriever=self._create_retriever(),
             memory=memory,
-            combine_docs_chain_kwargs={"prompt": self._create_chat_prompt()}
+            combine_docs_chain_kwargs={"prompt": prompt_template},
+            return_source_documents=False,
+            verbose=True
         )
 
-        # Get response
-        response = await qa_chain.arun(question)
+        # Get response using run
+        response = qa_chain.run(query)
 
         # Update last accessed time
         self._last_accessed[current_memory_id] = datetime.now()
@@ -131,7 +161,7 @@ class ChainedAIService:
         # Prepare structured output
         result = {
             "memory_id": current_memory_id,
-            "question": question,
+            "question": query,
             "answer": response,
             "has_previous_context": memory_id is not None
         }

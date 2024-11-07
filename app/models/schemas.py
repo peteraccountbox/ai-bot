@@ -23,3 +23,7 @@ class TrainRequest(BaseModel):
                 "id": "My Document ID"
             }
         }
+
+class StructuredQueryRequest(BaseModel):
+    query: str
+    memory_id: Optional[str] = None

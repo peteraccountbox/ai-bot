@@ -1,12 +1,14 @@
 # controllers/embedding_controller.py
 
 from fastapi import APIRouter, HTTPException, Depends
-from app.models.schemas import TrainRequest, QueryRequest
+from app.models.schemas import TrainRequest, QueryRequest, StructuredQueryRequest
 from app.services.embedding_service import EmbeddingService
 from app.utils.context import set_index_name, clear_index_name
+from app.services.chained_ai_service import ChainedAIService
 
 router = APIRouter()
 embedding_service = EmbeddingService()
+ai_service = ChainedAIService()
 
 @router.get("/")
 def read_root():
@@ -69,5 +71,22 @@ async def delete_document(
         if success:
             return {"message": f"Document {request.id} deleted successfully from {index_name}"}
         return {"message": f"Document {request.id} not found in {index_name}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/{index_name}/structured-answer")
+def retrieve_chained_ai_answer(
+    index_name: str,
+    request: StructuredQueryRequest,
+    _: None = Depends(set_index_context)
+):
+    try:
+        answer = ai_service.get_structured_answer(
+            query=request.query,
+            memory_id=request.memory_id
+        )
+        if answer:
+            return {"answer": answer}
+        return {"message": "No relevant content found"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,14 +1,26 @@
 # dao/embedding_dao.py
 import chromadb
 import os
+from chromadb.config import Settings
 from app.utils.context import get_index_name
 
 class EmbeddingDAO:
     def __init__(self):
-        self.client = chromadb.HttpClient(
-            host=os.getenv("CHROMA_HOST", "localhost"),
-            port=int(os.getenv("CHROMA_PORT", "8484"))
-        )
+        try:
+            # Use PersistentClient with a local path
+            persist_directory = os.getenv("CHROMA_PERSIST_DIR", "./chroma_db")
+            
+            self.client = chromadb.PersistentClient(
+                path=persist_directory,
+                settings=Settings(
+                    anonymized_telemetry=False,
+                    allow_reset=True
+                )
+            )
+            print(f"Successfully connected to ChromaDB at {persist_directory}")
+        except Exception as e:
+            print(f"Failed to initialize ChromaDB: {str(e)}")
+            raise e
     
     def _get_collection(self):
         # Get collection name from thread local
