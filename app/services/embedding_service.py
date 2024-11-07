@@ -141,23 +141,15 @@ class EmbeddingService:
 
         # Create chain with conversation memory
         conversation_id, chain = self.create_chain(conversation_id)
-        chat_history = self.memory_service.get_chat_history(conversation_id)
-
-        # Extract content from chat history messages
-        chat_history_content = [
-            msg.content if hasattr(msg, 'content') else str(msg)
-            for msg in chat_history
-        ]
         
-        full_context = " ".join([combined_context] + chat_history_content)
-
         # Run the chain
         response = chain.run(
-            context=full_context,
+            context=combined_context,
             input=user_input
         )
 
         chat_history = self.memory_service.get_chat_history(conversation_id)
+        
         return {
             "conversation_id": conversation_id,
             "answer": response,
