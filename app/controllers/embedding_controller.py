@@ -1,9 +1,10 @@
 # controllers/embedding_controller.py
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Header
 from app.models.schemas import TrainRequest, QueryRequest
 from app.services.embedding_service import EmbeddingService
 from app.utils.context import set_index_name, clear_index_name
+from typing import Optional
 
 router = APIRouter()
 embedding_service = EmbeddingService()
@@ -38,10 +39,11 @@ async def retrieve_answer(
     _: None = Depends(set_index_context)
 ):
     try:
-        answer = embedding_service.retrieve_answer(request.query)
-        if answer:
-            return {"answer": answer}
-        return {"message": "No relevant content found"}
+        answer = embedding_service.retrieve_answer(
+            user_input=request.query,
+            conversation_id=request.conversation_id
+        )
+        return answer
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -69,5 +71,23 @@ async def delete_document(
         if success:
             return {"message": f"Document {request.id} deleted successfully from {index_name}"}
         return {"message": f"Document {request.id} not found in {index_name}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/{index_name}/clear-history")
+async def clear_chat_history(
+    index_name: str,
+    request: QueryRequest,
+    _: None = Depends(set_index_context)
+):
+    try:
+        if not request.conversation_id:
+            raise HTTPException(status_code=400, detail="conversation_id is required")
+            
+        embedding_service.clear_memory(request.conversation_id)
+        return {
+            "message": "Chat history cleared successfully",
+            "conversation_id": request.conversation_id
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
