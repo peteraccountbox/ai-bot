@@ -76,24 +76,77 @@ class EmbeddingService:
 
         response = self.client.chat.completions.create(
             model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You're EngageBay's CRM assistant. Detect the language of the question and respond in the same language. Answer in bullet points, max 20 sentences per point."},
-                {"role": "user", "content": f"Context: {combined_context}\n\nQuestion: {user_input}\n\nAnswer from context only, in the same language as the question."}
+            messages = [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are EngageBay's CRM assistant. Follow these rules:"
+                            "\n- Start your response with a short introductory phrase about the topic (5-10 words)."
+                            "\n- Follow with bullet points for detailed responses."
+                            "\n- Max 20 sentences per bullet point."
+                            "\n- Use only the context provided."
+                            "\n- Respond in the same language as the question."
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Context: {combined_context}\n\n"
+            f"Question: {user_input}\n\n"
+            "Answer using only the context, in the same language."
+                        )
+                    }
             ],
             temperature=0.7,
             #max_tokens=3
         )
 
-        # Return both the answer and sources
+        # Example usage with the response from GPT
+        response_text = response.choices[0].message.content.strip()
+        validated_result = self.validate_and_format_response(response_text)
+
+        # Return or display the validated and formatted response
         return {
-            "answer": response.choices[0].message.content.strip(),
+            "answer": validated_result["formatted_text"],  # Plain text output
+            "answer_html": validated_result["html_output"],      # HTML output for web display
             "sources": sources,
             "metadata": {
                 "total_sources": len(sources),
-                "model_used": "gpt-4",
+                "model_used": "gpt-4o",
                 "context_length": len(combined_context)
             }
         }
+
+       
+
+
+    def validate_and_format_response(self, response_text):
+        # Split response into lines and check for bullet points
+        formatted_lines = []
+        for line in response_text.split("\n"):
+            # Strip leading/trailing spaces and check if it starts with a bullet marker
+            stripped_line = line.strip()
+            if stripped_line:
+                if not stripped_line.startswith("-"):
+                    # Add a bullet point if missing
+                    stripped_line = f"- {stripped_line}"
+                formatted_lines.append(stripped_line)
+        
+        # Combine the lines back into a formatted string
+        formatted_response = "\n".join(formatted_lines)
+        
+        # Convert to HTML format if needed
+        html_output = "<ul>"
+        for line in formatted_lines:
+            # Remove the bullet marker for HTML list formatting
+            html_output += f"<li>{line[2:].strip()}</li>"  # Remove the first 2 characters ("- ")
+        html_output += "</ul>"
+        
+        return {
+            "formatted_text": formatted_response,
+            "html_output": html_output
+        }
+
 
     def delete_collection(self, collection_name: str) -> bool:
         return self.embedding_dao.delete_collection(collection_name)
