@@ -3,7 +3,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Header
 from app.models.schemas import TrainRequest, QueryRequest
 from app.services.embedding_service import EmbeddingService
-from app.utils.context import set_index_name, clear_index_name
+from app.utils.context import set_index_name, clear_index_name, set_bot_role, clear_bot_role
 from typing import Optional
 from app.models.schemas import CrawlRequest
 from app.services.services import crawl_website
@@ -38,9 +38,11 @@ async def store_url(
 async def retrieve_answer(
     index_name: str,
     request: QueryRequest,
+    bot_role: Optional[str] = Header(default="",  alias="bot-role"),
     _: None = Depends(set_index_context)
 ):
     try:
+        set_bot_role(bot_role)
         answer = embedding_service.retrieve_answer(
             user_input=request.query,
             conversation_id=request.conversation_id

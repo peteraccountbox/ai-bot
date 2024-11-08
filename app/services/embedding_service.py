@@ -15,6 +15,7 @@ from .memory_service import MemoryService
 import chromadb
 import os
 from langchain.embeddings import OpenAIEmbeddings
+from app.utils.context import get_bot_role
 
 class EmbeddingService:
     def __init__(self):
@@ -34,23 +35,22 @@ class EmbeddingService:
             port=int(os.getenv("CHROMA_PORT", "8000"))
         )
 
+        self.memory_service = MemoryService()
+
+    def get_system_prompt(self):
+        bot_role = get_bot_role()
+        bot_role = bot_role.replace(" assistant", "")
+
         # Your original system message
-        system_message = """You're EngageBay's CRM assistant: Start with a brief intro (5-10 words), then use concise bullet points (max 2 sentences each) based on provided context and memory. Incorporate relevant details from prior conversations stored in memory where applicable. Reply in the question's language or default to English."""
+        system_message = f"""You're the {bot_role} assistant: Start with a brief intro (5-10 words), then use concise bullet points (max 2 sentences each) based on provided context and memory. Incorporate relevant details from prior conversations stored in memory where applicable. Reply in the question's language or default to English."""
         # system_message = """You're EngageBay's CRM assistant: Start with a brief intro (5-10 words), then use concise bullet points (max 2 sentences each) based only on provided context. Reply in the question's language or default to English."""
 
-        self.prompt = ChatPromptTemplate.from_messages([
+        prompt = ChatPromptTemplate.from_messages([
             ("system", system_message),
             MessagesPlaceholder(variable_name="chat_history"),
             ("human", "Context: {context}\n\nQuestion: {input}\n\nAnswer based on both memory and context, in the same language as the question.")
         ])
-        
-        # self.prompt = ChatPromptTemplate.from_messages([
-        #     ("system", system_message),
-        #     MessagesPlaceholder(variable_name="chat_history"),
-        #     ("human", "Context: {context}\n\nQuestion: {input}\n\nAnswer from context only, in the same language as the question.")
-        # ])
-
-        self.memory_service = MemoryService()
+        return prompt
 
     async def process_payload(self, request: TrainRequest):
         # Get content
@@ -85,7 +85,7 @@ class EmbeddingService:
         conversation_id, memory = self.memory_service.get_memory(conversation_id)
         chain = LLMChain(
             llm=self.chat_model,
-            prompt=self.prompt,
+            prompt=self.get_system_prompt(),
             memory=memory,
             verbose=True
         )
