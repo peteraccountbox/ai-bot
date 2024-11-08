@@ -32,3 +32,7 @@ class QueryRequest(BaseModel):
                 "conversation_id": "optional-uuid-here"
             }
         }
+
+class CrawlRequest(BaseModel):
+    website_url: str
+    excluded_paths: str
