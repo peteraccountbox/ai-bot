@@ -70,7 +70,17 @@ def crawl_website(base_url, exclude_patterns):
 
     end_time = time.time()
     print(f"\nCrawling completed in {end_time - start_time:.2f} seconds.")
-    return all_links
+
+    # Transform the all_links dictionary into the required array format
+    formatted_links = [
+        {
+            "url": url,
+            "wordCount": count
+        }
+        for url, count in all_links.items()
+    ]
+    
+    return formatted_links
 
 # Main execution
 if __name__ == "__main__":

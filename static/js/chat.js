@@ -101,6 +101,10 @@ function sendMessage() {
     const userInput = $('#user-input');
     const message = userInput.val().trim();
 
+    // Get role from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const botRole = urlParams.get('role');
+
     const indexName = window.location.pathname.split('/').pop();
 
     if (message) {
@@ -119,6 +123,9 @@ function sendMessage() {
             url: `/api/v1/${indexName}/answer`,
             method: 'POST',
             contentType: 'application/json',
+            headers: {
+                'bot-role': botRole || '' // Add bot-role header
+            },
             data: JSON.stringify({
                 "query": message,
                 "conversation_id": currentConversationId
