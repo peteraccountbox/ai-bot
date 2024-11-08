@@ -7,7 +7,7 @@ class EmbeddingDAO:
     def __init__(self):
         self.client = chromadb.HttpClient(
             host=os.getenv("CHROMA_HOST", "localhost"),
-            port=int(os.getenv("CHROMA_PORT", "8484"))
+            port=int(os.getenv("CHROMA_PORT", "8000"))
         )
     
     def _get_collection(self):

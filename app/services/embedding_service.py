@@ -31,7 +31,7 @@ class EmbeddingService:
         # Initialize ChromaDB client
         self.chroma_client = chromadb.HttpClient(
             host=os.getenv("CHROMA_HOST", "localhost"),
-            port=int(os.getenv("CHROMA_PORT", "8484"))
+            port=int(os.getenv("CHROMA_PORT", "8000"))
         )
 
         # Your original system message
@@ -67,7 +67,7 @@ class EmbeddingService:
         # Store metadata
         metadatas = [
             {
-                "url": request.content if request.type in (ContentType.URL, ContentType.FILE) else request.id,
+                "url": request.content if request.type in (ContentType.URL, ContentType.PDF) else request.id,
                 "id": request.id,
                 "type": request.type.value
             }
@@ -78,7 +78,7 @@ class EmbeddingService:
     def generate_embedding(self, text):
         # Generate embeddings using OpenAI's `text-embedding-ada-002`
         response = self.embedding_function.embed_query(text)
-        return response.data[0].embedding
+        return response
 
     def create_chain(self, conversation_id: str) -> tuple[str, LLMChain]:
         """Create a new chain with conversation-specific memory"""
@@ -154,9 +154,10 @@ class EmbeddingService:
         # Run the chain
         response = chain.run(
             context=combined_context,
-            #memory=memory_context,
             input=user_input
         )
+
+        self.memory_service.save_memory(conversation_id, chain.memory)
 
         chat_history = self.memory_service.get_chat_history(conversation_id)
         
