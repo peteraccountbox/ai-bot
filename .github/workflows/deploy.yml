@@ -15,19 +15,21 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Create deployment package
+    - name: Build Docker image using docker-compose
       run: |
-        # Create deployment directory
-        mkdir deploy
-        cp -r * deploy/
-        cp .env deploy/
+        # Create .env file for build
+        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
         
-        # Create tar file
-        tar -czf deploy.tar.gz -C deploy .
+        # Build the image
+        docker-compose build
         
-        # Show size
-        echo "Deployment package size:"
-        ls -lh deploy.tar.gz
+        # Save the image
+        docker save ai-bot_app > image.tar
+        gzip image.tar
+        
+        # Show image size
+        echo "Image size:"
+        ls -lh image.tar.gz
 
     - name: Setup SSH
       run: |
@@ -36,9 +38,10 @@ jobs:
         chmod 600 ~/.ssh/ec2.pem
         ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Copy files to EC2
+    - name: Copy Docker image to EC2
       run: |
-        scp -i ~/.ssh/ec2.pem deploy.tar.gz ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/deploy.tar.gz
+        echo "Copying image to EC2..."
+        scp -i ~/.ssh/ec2.pem image.tar.gz ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/image.tar.gz
 
     - name: Deploy on EC2
       uses: appleboy/ssh-action@master
@@ -47,24 +50,21 @@ jobs:
         username: ${{ env.EC2_USER }}
         key: ${{ secrets.EC2_KEY }}
         script: |
-          # Cleanup old deployment
-          rm -rf ~/app
-          mkdir -p ~/app
+          # Clean up any previous deployment
+          docker-compose down || echo "No running containers to stop"
           
-          # Extract new files
+          # Load and extract the image
+          cd ~
+          gunzip image.tar.gz
+          docker load < image.tar
+
+          # Start the new containers
           cd ~/app
-          tar -xzf ~/deploy.tar.gz
-          rm ~/deploy.tar.gz
-          
-          # Stop existing containers
-          docker-compose down || true
-          
-          # Build and start new containers
           docker-compose up -d --build
           
-          # Show logs
+          # Display container status and logs
           sleep 5
           echo "Container Status:"
           docker-compose ps
           echo "Container Logs:"
-          docker-compose logs 
+          docker-compose logs
