@@ -2,16 +2,14 @@ FROM python:3.11-slim
 
 WORKDIR /workspace
 
-# Only copy what's needed
+# Copy requirements first to leverage Docker caching
 COPY requirements.txt .
 
-# Install dependencies and cleanup in the same layer
-RUN pip install --no-cache-dir -r requirements.txt && \
-    rm -rf ~/.cache/pip/*
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy only necessary application files
-COPY main.py .
-COPY app/ app/
+# Copy application files
+COPY . .
 
 EXPOSE 8181
 

@@ -15,21 +15,19 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Build Docker image
+    - name: Create deployment package
       run: |
-        docker build -t ${{ env.IMAGE_NAME }}:latest .
-        docker save ${{ env.IMAGE_NAME }}:latest > image.tar
-        gzip image.tar
+        # Create deployment directory
+        mkdir deploy
+        cp -r * deploy/
+        cp .env deploy/
         
-        # Print image sizes
-        echo "Original image size:"
-        docker images ${{ env.IMAGE_NAME }}:latest --format "{{.Size}}"
+        # Create tar file
+        tar -czf deploy.tar.gz -C deploy .
         
-        echo "Compressed tar size:"
-        ls -lh image.tar.gz | awk '{print $5}'
-        
-        # Get size in bytes for verification
-        stat -f%z image.tar.gz || stat -c%s image.tar.gz
+        # Show size
+        echo "Deployment package size:"
+        ls -lh deploy.tar.gz
 
     - name: Setup SSH
       run: |
@@ -38,11 +36,9 @@ jobs:
         chmod 600 ~/.ssh/ec2.pem
         ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Copy Docker image to EC2
+    - name: Copy files to EC2
       run: |
-        echo "Starting file transfer of size:"
-        ls -lh image.tar.gz
-        scp -i ~/.ssh/ec2.pem image.tar.gz ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/image.tar.gz
+        scp -i ~/.ssh/ec2.pem deploy.tar.gz ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/deploy.tar.gz
 
     - name: Deploy on EC2
       uses: appleboy/ssh-action@master
@@ -51,28 +47,24 @@ jobs:
         username: ${{ env.EC2_USER }}
         key: ${{ secrets.EC2_KEY }}
         script: |
-          echo "Checking received file size:"
-          ls -lh ~/image.tar.gz
+          # Cleanup old deployment
+          rm -rf ~/app
+          mkdir -p ~/app
           
-          echo "Stopping existing container..."
-          docker stop ${{ env.IMAGE_NAME }} || true
-          docker rm ${{ env.IMAGE_NAME }} || true
+          # Extract new files
+          cd ~/app
+          tar -xzf ~/deploy.tar.gz
+          rm ~/deploy.tar.gz
           
-          echo "Loading new image..."
-          gunzip -f ~/image.tar.gz
-          docker load < ~/image.tar
+          # Stop existing containers
+          docker-compose down || true
           
-          echo "Starting new container..."
-          docker run -d \
-            --name ${{ env.IMAGE_NAME }} \
-            -p 8181:8181 \
-            -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
-            ${{ env.IMAGE_NAME }}:latest
+          # Build and start new containers
+          docker-compose up -d --build
           
-          echo "Cleanup..."
-          rm ~/image.tar
-          
-          echo "Container status:"
-          docker ps
-          echo "Container logs:"
-          docker logs ${{ env.IMAGE_NAME }} 
+          # Show logs
+          sleep 5
+          echo "Container Status:"
+          docker-compose ps
+          echo "Container Logs:"
+          docker-compose logs 

@@ -9,6 +9,9 @@ services:
       - "8181:8181"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./static:/workspace/static
+      - ./templates:/workspace/templates
     restart: unless-stopped
     networks:
       - app_network
