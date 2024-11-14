@@ -5,17 +5,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: ai-bot-app # This should match the image name used in the script
     ports:
       - "8181:8181"
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    volumes:
-      - ./static:/workspace/static
-      - ./templates:/workspace/templates
-    restart: unless-stopped
-    networks:
-      - app_network
-
-networks:
-  app_network:
-    driver: bridge

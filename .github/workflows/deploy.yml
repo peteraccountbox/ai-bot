@@ -5,73 +5,97 @@ on:
     branches: [ deploy ]
 
 env:
-  IMAGE_NAME: ai-bot
+  IMAGE_NAME: ai-bot-app  # Ensure this matches the image name in docker-compose.yml
   EC2_HOST: ec2-52-37-221-188.us-west-2.compute.amazonaws.com
   EC2_USER: ubuntu
 
 jobs:
-  deploy:
+  # Step 1: Checkout the repository
+  checkout:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Install Docker Compose
-      run: |
-        sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
-        docker-compose --version  # Verify installation
+  # Step 2: Install Docker Compose
+  install-docker-compose:
+    runs-on: ubuntu-latest
+    needs: checkout  # This ensures the checkout job runs first
+    steps:
+      - name: Install Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version  # Verify installation
 
-    - name: Build Docker image using docker-compose
-      run: |
-        # Create .env file for build
-        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
-        
-        # Build the image
-        docker-compose build
-        
-        # Save the image
-        docker save ai-bot_app > image.tar
-        gzip image.tar
-        
-        # Show image size
-        echo "Image size:"
-        ls -lh image.tar.gz
+  # Step 3: Build Docker image using docker-compose
+  build-image:
+    runs-on: ubuntu-latest
+    needs: install-docker-compose  # Ensure Docker Compose is installed first
+    steps:
+      - name: Create .env file for build
+        run: |
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
 
-    - name: Setup SSH
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.EC2_KEY }}" | sed 's/\\n/\n/g' > ~/.ssh/ec2.pem
-        chmod 600 ~/.ssh/ec2.pem
-        ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
-
-    - name: Copy Docker image to EC2
-      run: |
-        echo "Copying image to EC2..."
-        scp -i ~/.ssh/ec2.pem image.tar.gz ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/image.tar.gz
-
-    - name: Deploy on EC2
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ env.EC2_HOST }}
-        username: ${{ env.EC2_USER }}
-        key: ${{ secrets.EC2_KEY }}
-        script: |
-          # Clean up any previous deployment
-          docker-compose down || echo "No running containers to stop"
+      - name: Build Docker image using docker-compose
+        run: |
+          docker-compose build  # Build the image based on docker-compose.yml
+          docker save ${{ env.IMAGE_NAME }} > image.tar  # Save the image
+          gzip image.tar  # Compress the image for faster transfer
           
-          # Load and extract the image
-          cd ~
-          gunzip image.tar.gz
-          docker load < image.tar
-          rm image.tar
+      - name: Show image size
+        run: |
+          ls -lh image.tar.gz  # Display the compressed image size
 
-          # Start the new containers
-          cd ~/app
-          docker-compose up -d --build
-          
-          # Display container status and logs
-          sleep 5
-          echo "Container Status:"
-          docker-compose ps
-          echo "Container Logs:"
-          docker-compose logs
+  # Step 4: Setup SSH keys for EC2 access
+  setup-ssh:
+    runs-on: ubuntu-latest
+    needs: build-image  # Ensure image is built first
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_KEY }}" | sed 's/\\n/\n/g' > ~/.ssh/ec2.pem
+          chmod 600 ~/.ssh/ec2.pem
+          ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
+
+  # Step 5: Copy Docker image to EC2
+  copy-image-to-ec2:
+    runs-on: ubuntu-latest
+    needs: setup-ssh  # Ensure SSH setup is complete
+    steps:
+      - name: Copy Docker image to EC2
+        run: |
+          echo "Copying image to EC2..."
+          scp -i ~/.ssh/ec2.pem image.tar.gz ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/image.tar.gz
+
+  # Step 6: Deploy the Docker image on EC2
+  deploy-on-ec2:
+    runs-on: ubuntu-latest
+    needs: copy-image-to-ec2  # Ensure image is copied to EC2 first
+    steps:
+      - name: Deploy on EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ env.EC2_HOST }}
+          username: ${{ env.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            # Cleanup any existing deployments
+            docker-compose down || echo "No running containers to stop"
+            
+            # Load and extract the Docker image
+            cd ~
+            gunzip image.tar.gz
+            docker load < image.tar  # Load the saved image
+            rm image.tar  # Clean up the tar file
+
+            # Start the new containers with port 8181 mapping
+            cd ~/app
+            docker-compose up -d --build  # Ensure the port mappings in docker-compose.yml are correct
+            
+            # Display container status and logs
+            sleep 5
+            echo "Container Status:"
+            docker-compose ps
+            echo "Container Logs:"
+            docker-compose logs
