@@ -2,7 +2,7 @@ name: Deploy to EC2
 
 on:
   push:
-    branches: [ main ]
+    branches: [ deploy ]
 
 env:
   IMAGE_NAME: ai-bot
