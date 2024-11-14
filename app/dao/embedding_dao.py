@@ -1,13 +1,21 @@
 # dao/embedding_dao.py
-import chromadb
 import os
+import chromadb
+from chromadb.config import Settings
 from app.utils.context import get_index_name
 
 class EmbeddingDAO:
     def __init__(self):
-        self.client = chromadb.HttpClient(
-            host=os.getenv("CHROMA_HOST", "localhost"),
-            port=int(os.getenv("CHROMA_PORT", "8000"))
+        chroma_host = os.getenv("CHROMA_SERVER_HOST", "localhost")
+        chroma_port = int(os.getenv("CHROMA_SERVER_HTTP_PORT", "8000"))
+        
+        # Remove the api_impl setting and use default configuration
+        self.client = chromadb.Client(
+            Settings(
+                chroma_server_host=chroma_host,
+                chroma_server_http_port=chroma_port,
+                anonymized_telemetry=False
+            )
         )
     
     def _get_collection(self):
