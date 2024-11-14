@@ -2,10 +2,10 @@ name: Deploy to EC2
 
 on:
   push:
-    branches: [ deploy ]
+    branches: [ main ]
 
 env:
-  CONTAINER_NAME: ai-bot
+  IMAGE_NAME: ai-bot
   EC2_HOST: ec2-52-37-221-188.us-west-2.compute.amazonaws.com
   EC2_USER: ubuntu
 
@@ -15,32 +15,42 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Docker context for remote host
+    - name: Build Docker image
+      run: |
+        docker build -t ${{ env.IMAGE_NAME }} .
+        docker save ${{ env.IMAGE_NAME }} > image.tar
+
+    - name: Setup SSH
       run: |
         mkdir -p ~/.ssh
-        echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2.pem
+        echo "${{ secrets.EC2_KEY }}" | sed 's/\\n/\n/g' > ~/.ssh/ec2.pem
         chmod 600 ~/.ssh/ec2.pem
+        ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Copy project files to EC2
+    - name: Copy Docker image to EC2
       run: |
-        scp -i ~/.ssh/ec2.pem -o StrictHostKeyChecking=no -r \
-          ./* ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/app/
+        scp -i ~/.ssh/ec2.pem image.tar ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/image.tar
 
-    - name: Deploy to EC2
+    - name: Deploy on EC2
       uses: appleboy/ssh-action@master
-      env:
-        CONTAINER_NAME: ai-bot
       with:
         host: ${{ env.EC2_HOST }}
         username: ${{ env.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        envs: CONTAINER_NAME
+        key: ${{ secrets.EC2_KEY }}
         script: |
-          cd ~/app
-          docker ps -aq --filter "name=ai-bot" | grep -q . && docker stop ai-bot && docker rm ai-bot || true
-          docker build -t ai-bot .
+          # Load the new image
+          docker load < ~/image.tar
+          
+          # Stop and remove existing container
+          docker ps -q --filter "name=${{ env.IMAGE_NAME }}" | xargs -r docker stop
+          docker ps -aq --filter "name=${{ env.IMAGE_NAME }}" | xargs -r docker rm
+          
+          # Run new container
           docker run -d \
-            --name ai-bot \
+            --name ${{ env.IMAGE_NAME }} \
             -p 8181:8181 \
             -e OPENAI_API_KEY='${{ secrets.OPENAI_API_KEY }}' \
-            ai-bot
+            ${{ env.IMAGE_NAME }}
+          
+          # Clean up
+          rm ~/image.tar
