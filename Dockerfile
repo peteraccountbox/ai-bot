@@ -1,34 +1,18 @@
-FROM ubuntu:22.04
-
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHONUNBUFFERED=1
+FROM python:3.11-slim
 
 WORKDIR /workspace
 
-# Update apt sources and install software-properties-common
-RUN apt-get update && \
-    apt-get install -y software-properties-common && \
-    add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get update
-
-# Install Python and other dependencies
-RUN apt-get install -y \
-    python3.10 \
-    python3-pip \
-    curl \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements first to leverage Docker caching
+# Only copy what's needed
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip3 install --no-cache-dir -r requirements.txt
+# Install dependencies and cleanup in the same layer
+RUN pip install --no-cache-dir -r requirements.txt && \
+    rm -rf ~/.cache/pip/*
 
-# Copy application files
-COPY . .
+# Copy only necessary application files
+COPY main.py .
+COPY app/ app/
 
 EXPOSE 8181
 
-# Use explicit host and port binding
-CMD ["python3", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8181"]
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8181"]

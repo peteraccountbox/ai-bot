@@ -2,7 +2,7 @@ name: Deploy to EC2
 
 on:
   push:
-    branches: [ deploy ]
+    branches: [ main ]
 
 env:
   IMAGE_NAME: ai-bot
@@ -14,6 +14,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+
+    - name: Build Docker image
+      run: |
+        docker build -t ${{ env.IMAGE_NAME }}:latest .
+        docker save ${{ env.IMAGE_NAME }}:latest > image.tar
+        gzip image.tar
+        
+        # Print image sizes
+        echo "Original image size:"
+        docker images ${{ env.IMAGE_NAME }}:latest --format "{{.Size}}"
+        
+        echo "Compressed tar size:"
+        ls -lh image.tar.gz | awk '{print $5}'
+        
+        # Get size in bytes for verification
+        stat -f%z image.tar.gz || stat -c%s image.tar.gz
 
     - name: Setup SSH
       run: |
