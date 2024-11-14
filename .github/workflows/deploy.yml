@@ -17,23 +17,10 @@ jobs:
 
     - name: Create deployment package
       run: |
-        # Debug: Show current directory contents
-        echo "Current directory contents:"
-        ls -la
-        
-        # Create .env file
-        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
-        
-        # Create deployment directory and copy files
-        mkdir -p deploy
-        cp Dockerfile docker-compose.yml requirements.txt main.py .env deploy/
-        cp -r static/ deploy/static/ || true
-        cp -r templates/ deploy/templates/ || true
-        cp -r app/ deploy/app/ || true
-        
-        # Debug: Show deployment directory contents
-        echo "Deployment directory contents:"
-        ls -la deploy/
+        # Create deployment directory
+        mkdir deploy
+        cp -r * deploy/
+        cp .env deploy/
         
         # Create tar file
         tar -czf deploy.tar.gz -C deploy .
