@@ -50,31 +50,3 @@ jobs:
         scp -i ~/.ssh/ec2.pem image.tar.gz ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/image.tar.gz
         scp -i ~/.ssh/ec2.pem docker-compose.yml ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/app/docker-compose.yml
         scp -i ~/.ssh/ec2.pem .env ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/app/.env
-
-    - name: Deploy on EC2
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ env.EC2_HOST }}
-        username: ${{ env.EC2_USER }}
-        key: ${{ secrets.EC2_KEY }}
-        script: |
-          # Cleanup old deployment
-          mkdir -p ~/app
-          
-          # Extract new files
-          cd ~/app
-          gunzip -f ~/image.tar.gz
-          docker load < ~/image.tar
-          
-          # Stop existing containers
-          docker-compose down || true
-          
-          # Build and start new containers
-          docker-compose up -d
-          
-          # Show logs
-          sleep 5
-          echo "Container Status:"
-          docker-compose ps
-          echo "Container Logs:"
-          docker-compose logs 
