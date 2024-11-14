@@ -30,7 +30,7 @@ jobs:
         docker-compose build
         
         # Save the image
-        docker save ai-bot_app > image.tar
+        docker save ai-bot-app > image.tar
         gzip image.tar
         
         # Show image size
