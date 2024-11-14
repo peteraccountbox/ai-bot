@@ -30,7 +30,7 @@ jobs:
         
         # Create deployment package with existing files
         mkdir deploy
-        cp Dockerfile docker-compose.yml requirements.txt main.py deploy/
+        cp Dockerfile docker-compose.yml requirements.txt main.py .env deploy/
         cp -r app/ deploy/
         
         # Debug: List deployment package contents
