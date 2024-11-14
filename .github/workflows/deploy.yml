@@ -38,26 +38,11 @@ jobs:
         chmod 600 ~/.ssh/ec2.pem
         ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Create deployment package
+    - name: Copy Docker image to EC2
       run: |
-        # Debug: List current directory contents
-        echo "Current directory contents:"
-        ls -la
-        
-        # Create deployment package with existing files
-        mkdir deploy
-        cp Dockerfile docker-compose.yml requirements.txt main.py .env deploy/
-        cp -r app/ deploy/
-        
-        # Debug: List deployment package contents
-        echo "Deployment package contents:"
-        ls -la deploy/
-        
-        tar -czf deploy.tar.gz -C deploy .
-
-    - name: Copy files to EC2
-      run: |
-        scp -i ~/.ssh/ec2.pem deploy.tar.gz ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/deploy.tar.gz
+        echo "Starting file transfer of size:"
+        ls -lh image.tar.gz
+        scp -i ~/.ssh/ec2.pem image.tar.gz ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/image.tar.gz
 
     - name: Deploy on EC2
       uses: appleboy/ssh-action@master
@@ -66,34 +51,28 @@ jobs:
         username: ${{ env.EC2_USER }}
         key: ${{ secrets.EC2_KEY }}
         script: |
-          # Clean up old deployment
-          rm -rf ~/app
-          mkdir -p ~/app
+          echo "Checking received file size:"
+          ls -lh ~/image.tar.gz
           
-          # Extract new files
-          tar -xzf deploy.tar.gz -C ~/app
-          cd ~/app
+          echo "Stopping existing container..."
+          docker stop ${{ env.IMAGE_NAME }} || true
+          docker rm ${{ env.IMAGE_NAME }} || true
           
-          # Debug: List extracted files
-          echo "Extracted files:"
-          ls -la
+          echo "Loading new image..."
+          gunzip -f ~/image.tar.gz
+          docker load < ~/image.tar
           
-          # Set environment variable
-          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
+          echo "Starting new container..."
+          docker run -d \
+            --name ${{ env.IMAGE_NAME }} \
+            -p 8181:8181 \
+            -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+            ${{ env.IMAGE_NAME }}:latest
           
-          # Stop existing containers and remove old images
-          docker-compose down
-          docker system prune -f
+          echo "Cleanup..."
+          rm ~/image.tar
           
-          # Build and start new containers
-          docker-compose up -d --build
-          
-          # Wait for container to start and show logs
-          sleep 10
-          echo "Container Status:"
+          echo "Container status:"
           docker ps
-          echo "Container Logs:"
-          docker-compose logs
-          
-          # Clean up
-          rm ~/deploy.tar.gz
+          echo "Container logs:"
+          docker logs ${{ env.IMAGE_NAME }} 
