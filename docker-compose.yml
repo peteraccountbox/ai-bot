@@ -9,4 +9,17 @@ services:
       - "8181:8181"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PORT=8181
+      - HOST=0.0.0.0
     restart: unless-stopped
+    networks:
+      - app_network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8181/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  app_network:
+    driver: bridge

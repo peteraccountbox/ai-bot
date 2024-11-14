@@ -59,5 +59,12 @@ jobs:
           # Build and start new containers
           docker-compose up -d --build
           
+          # Wait for container to start and show logs
+          sleep 10
+          echo "Container Status:"
+          docker ps
+          echo "Container Logs:"
+          docker-compose logs
+          
           # Clean up
           rm ~/deploy.tar.gz
