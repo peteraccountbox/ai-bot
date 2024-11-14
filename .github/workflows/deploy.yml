@@ -24,10 +24,30 @@ jobs:
 
     - name: Create deployment package
       run: |
+        # List files before packaging (for debugging)
+        echo "Current directory contents:"
+        ls -la
+        
+        # Create requirements.txt if it doesn't exist
+        if [ ! -f requirements.txt ]; then
+          echo "Creating requirements.txt"
+          echo "fastapi" > requirements.txt
+          echo "uvicorn" >> requirements.txt
+          echo "openai" >> requirements.txt
+          echo "python-dotenv" >> requirements.txt
+        fi
+        
         # Create a minimal deployment package
         mkdir deploy
-        cp Dockerfile docker-compose.yml requirements.txt main.py deploy/
-        cp -r app/ deploy/
+        cp Dockerfile docker-compose.yml deploy/
+        cp requirements.txt deploy/
+        cp main.py deploy/ || echo "Warning: main.py not found"
+        cp -r app/ deploy/ || echo "Warning: app/ directory not found"
+        
+        # List deployment package contents (for debugging)
+        echo "Deployment package contents:"
+        ls -la deploy/
+        
         tar -czf deploy.tar.gz -C deploy .
 
     - name: Copy files to EC2
@@ -48,6 +68,10 @@ jobs:
           # Extract new files
           tar -xzf deploy.tar.gz -C ~/app
           cd ~/app
+          
+          # List extracted files (for debugging)
+          echo "Extracted files:"
+          ls -la
           
           # Set environment variable
           echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
