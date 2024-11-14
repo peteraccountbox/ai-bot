@@ -5,15 +5,13 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /workspace
 
-# Verify and update apt sources
-RUN echo "Verifying apt sources..." && \
-    cat /etc/apt/sources.list && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    mkdir -p /var/lib/apt/lists/partial && \
-    apt-get update -o Acquire::CompressionTypes::Order::=gz
+# Update apt sources and install software-properties-common
+RUN apt-get update && \
+    apt-get install -y software-properties-common && \
+    add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get update
 
-# Install Python and dependencies
+# Install Python and other dependencies
 RUN apt-get install -y \
     python3.10 \
     python3-pip \
