@@ -6,9 +6,14 @@ import uuid
 import json
 from redis import Redis
 import os
+from dotenv import load_dotenv
 
 class MemoryService:
     def __init__(self):
+        load_dotenv()
+
+        print("Initializing MemoryService", os.getenv("REDIS_HOST"), os.getenv("REDIS_PORT"), os.getenv("REDIS_USERNAME"), os.getenv("REDIS_PASSWORD"))
+        
         # Initialize Redis client with username and password authentication
         self.redis = Redis(
             host=os.getenv("REDIS_HOST", "localhost"),
