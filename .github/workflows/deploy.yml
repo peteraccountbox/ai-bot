@@ -74,7 +74,6 @@ jobs:
         
         # Copy config files
         scp -i ~/.ssh/ec2.pem docker-compose.yml ${EC2_USER}@${EC2_HOST}:~/app/docker-compose.yml
-        scp -i ~/.ssh/ec2.pem .env ${EC2_USER}@${EC2_HOST}:~/app/.env
         scp -i ~/.ssh/ec2.pem requirements.txt ${EC2_USER}@${EC2_HOST}:~/app/requirements.txt
 
     - name: Deploy on EC2
