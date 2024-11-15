@@ -8,6 +8,14 @@ env:
   IMAGE_NAME: ai-bot
   EC2_HOST: ec2-52-37-221-188.us-west-2.compute.amazonaws.com
   EC2_USER: ubuntu
+  CHROMA_PERSISTANCE_PATH: ~/
+  CHROMA_SERVER_HOST: http://52.37.221.188
+  CHROMA_SERVER_HTTP_PORT: 8000
+  # Redis
+  REDIS_HOST: redis-13571.c238.us-central1-2.gce.redns.redis-cloud.com
+  REDIS_PORT: 13571
+  REDIS_USERNAME: default
+  REDIS_PASSWORD: QzOWoUleui8jA2AKCdPjCYEXniqosWmX
 
 jobs:
   deploy:
@@ -24,7 +32,7 @@ jobs:
     - name: Build Docker image using docker-compose
       run: |
         # Create .env file for build
-        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
+       echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
         
         # Build the image
         docker-compose build
@@ -44,30 +52,25 @@ jobs:
         chmod 600 ~/.ssh/ec2.pem
         ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Split and Transfer to EC2
+    - name: Save and split Docker image
       run: |
-        # Install required tools
-        sudo apt-get update && sudo apt-get install -y pv parallel
+        docker save ${{ env.IMAGE_NAME }}:latest | gzip > image.tar.gz
+        mkdir -p splits
+        # Increased split size to 20M for fewer splits
+        split -b 20M image.tar.gz splits/image_
+        # Show split files for verification
+        ls -lh splits/
         
-        # Create directory for split files
-        mkdir splits
+    - name: Upload splits in parallel
+      run: |
+        cd splits
+        # Upload splits in parallel using background processes
+        for file in image_*; do
+          scp -o StrictHostKeyChecking=no -i ${{ secrets.EC2_KEY }} $file ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/app/splits/ &
+        done
+        # Wait for all background uploads to complete
+        wait
         
-        # Split the image into chunks
-        echo "Splitting files into chunks..."
-        split -b 50M image.tar.gz splits/image_
-        
-        # Create remote directory
-        ssh -i ~/.ssh/ec2.pem ${EC2_USER}@${EC2_HOST} "mkdir -p ~/app/splits"
-        
-        # Transfer splits in parallel (8 concurrent transfers)
-        echo "Transferring splits in parallel..."
-        ls splits/* | parallel -j 8 scp -i ~/.ssh/ec2.pem {} ${EC2_USER}@${EC2_HOST}:~/app/splits/
-        
-        # Copy config files
-        scp -i ~/.ssh/ec2.pem docker-compose.yml ${EC2_USER}@${EC2_HOST}:~/app/docker-compose.yml
-        scp -i ~/.ssh/ec2.pem .env ${EC2_USER}@${EC2_HOST}:~/app/.env
-        scp -i ~/.ssh/ec2.pem requirements.txt ${EC2_USER}@${EC2_HOST}:~/app/requirements.txt
-
     - name: Deploy on EC2
       uses: appleboy/ssh-action@master
       with:
@@ -77,10 +80,30 @@ jobs:
         script: |
           cd ~/app
           
-          # Reassemble the image
-          echo 'Reassembling image file...'
-          cat splits/image_* > image.tar.gz
-          rm -rf splits
+          # Reassemble image in parallel with cleanup
+          {
+            echo 'Reassembling image file...'
+            cat splits/image_* > image.tar.gz &
+            
+            # Cleanup old splits in background
+            rm -rf splits/* &
+          } wait
+          
+          # Ensure .env file exists and has correct permissions
+          touch .env
+          chmod 600 .env
+          
+          # Write environment variables to .env
+          cat > .env << 'EOL'
+          OPENAI_API_KEY=${OPENAI_API_KEY}
+          CHROMA_PERSISTANCE_PATH=${CHROMA_PERSISTANCE_PATH}
+          CHROMA_SERVER_HOST=${CHROMA_SERVER_HOST}
+          CHROMA_SERVER_HTTP_PORT=${CHROMA_SERVER_HTTP_PORT}
+          REDIS_HOST=${REDIS_HOST}
+          REDIS_PORT=${REDIS_PORT}
+          REDIS_USERNAME=${REDIS_USERNAME}
+          REDIS_PASSWORD=${REDIS_PASSWORD}
+          EOL
           
           # Load the Docker image
           gunzip -f image.tar.gz
