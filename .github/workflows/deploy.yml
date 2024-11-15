@@ -44,9 +44,50 @@ jobs:
         chmod 600 ~/.ssh/ec2.pem
         ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Copy Docker image and config files to EC2
+    - name: Split and Copy Docker image to EC2
       run: |
-        echo "Copying files to EC2..."
-        scp -i ~/.ssh/ec2.pem image.tar.gz ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/image.tar.gz
+        # Split the file into 100MB chunks
+        split -b 100m image.tar.gz "image.part"
+        
+        # Copy each part to EC2
+        for file in image.part*; do
+          echo "Copying $file..."
+          scp -i ~/.ssh/ec2.pem "$file" ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/"$file"
+        done
+        
+        # Copy config files
         scp -i ~/.ssh/ec2.pem docker-compose.yml ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/app/docker-compose.yml
         scp -i ~/.ssh/ec2.pem .env ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/app/.env
+
+    - name: Deploy on EC2
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ env.EC2_HOST }}
+        username: ${{ env.EC2_USER }}
+        key: ${{ secrets.EC2_KEY }}
+        script: |
+          # Cleanup and prepare directory
+          mkdir -p ~/app
+          cd ~/app
+          
+          # Load the Docker image
+          gunzip -f ~/image.tar.gz
+          docker load < ~/image.tar
+          
+          # Stop any existing containers
+          docker-compose down || true
+          
+          # Pull any additional images if needed
+          docker-compose pull
+          
+          # Start the containers in detached mode
+          docker-compose up -d
+          
+          # Wait a moment for containers to start
+          sleep 10
+          
+          # Show container status and logs
+          echo "Container Status:"
+          docker-compose ps
+          echo "Container Logs:"
+          docker-compose logs --tail=50
