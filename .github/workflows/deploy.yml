@@ -73,7 +73,8 @@ jobs:
         ls splits/* | parallel -j 8 scp -i ~/.ssh/ec2.pem {} ${EC2_USER}@${EC2_HOST}:~/app/splits/
         
         # Copy config files
-        scp -i ~/.ssh/ec2.pem docker-compose.yml ${EC2_USER}@${EC2_HOST}:~/app/docker-compose.yml
+        scp -i ~/.ssh/ec2.pem Dockerfile ${EC2_USER}@${EC2_HOST}:~/app/Dockerfile
+        # scp -i ~/.ssh/ec2.pem docker-compose.yml ${EC2_USER}@${EC2_HOST}:~/app/docker-compose.yml
         scp -i ~/.ssh/ec2.pem requirements.txt ${EC2_USER}@${EC2_HOST}:~/app/requirements.txt
 
     - name: Deploy on EC2
