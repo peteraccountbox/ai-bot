@@ -106,10 +106,4 @@ jobs:
           
           # Start the container with docker-compose
           docker-compose pull || true
-          docker-compose up -d --remove-orphans --build
-          
-          # Clean up
-          docker system prune -f
-          
-          # Show logs
-          docker-compose logs --tail=50
+          docker-compose up -d --build
