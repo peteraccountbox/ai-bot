@@ -11,7 +11,6 @@ env:
   CHROMA_PERSISTANCE_PATH: ~/
   CHROMA_SERVER_HOST: http://52.37.221.188
   CHROMA_SERVER_HTTP_PORT: 8000
-  # Redis
   REDIS_HOST: redis-13571.c238.us-central1-2.gce.redns.redis-cloud.com
   REDIS_PORT: 13571
   REDIS_USERNAME: default
@@ -32,13 +31,13 @@ jobs:
     - name: Build Docker image using docker-compose
       run: |
         # Create .env file for build
-       echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
+        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
         
         # Build the image
         docker-compose build
         
         # Save the image
-        docker save ai-bot > image.tar
+        docker save ${IMAGE_NAME} > image.tar
         gzip image.tar
         
         # Show image size
