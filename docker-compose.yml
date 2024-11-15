@@ -5,6 +5,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ai-bot-app # This should match the image name used in the script
+    image: ai-bot # This should match the image name used in the script
     ports:
       - "8181:8181"
