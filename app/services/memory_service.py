@@ -9,8 +9,14 @@ import os
 
 class MemoryService:
     def __init__(self):
-        # Initialize Redis client
-        self.redis = Redis(host=os.getenv("REDIS_HOST", "localhost"), port=os.getenv("REDIS_PORT", 6379), db=os.getenv("REDIS_DB", 0), decode_responses=True)
+        # Initialize Redis client with username and password authentication
+        self.redis = Redis(
+            host=os.getenv("REDIS_HOST", "localhost"),
+            port=os.getenv("REDIS_PORT", 6379),
+            username=os.getenv("REDIS_USERNAME"),  # Add username authentication
+            password=os.getenv("REDIS_PASSWORD"),  # Add password authentication
+            decode_responses=True
+        )
 
     def generate_conversation_id(self) -> str:
         # Generate a unique conversation ID

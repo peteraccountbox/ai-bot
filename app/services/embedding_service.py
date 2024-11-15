@@ -29,12 +29,8 @@ class EmbeddingService:
             temperature=0.7
         )
         
-        # Initialize ChromaDB client
-        self.chroma_client = chromadb.HttpClient(
-            host=os.getenv("CHROMA_HOST", "localhost"),
-            port=int(os.getenv("CHROMA_PORT", "8000"))
-        )
-
+        # Use the ChromaDB client from the DAO instead of creating a new one
+        self.chroma_client = self.embedding_dao.client
         self.memory_service = MemoryService()
 
     def get_system_prompt(self):
