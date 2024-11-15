@@ -86,22 +86,6 @@ jobs:
         script: |
           cd ~/app
           
-          # Ensure .env file exists and has correct permissions
-          touch .env
-          chmod 600 .env
-          
-          # Write environment variables to .env
-          cat > .env << 'EOL'
-          OPENAI_API_KEY=${OPENAI_API_KEY}
-          CHROMA_PERSISTANCE_PATH=${CHROMA_PERSISTANCE_PATH}
-          CHROMA_SERVER_HOST=${CHROMA_SERVER_HOST}
-          CHROMA_SERVER_HTTP_PORT=${CHROMA_SERVER_HTTP_PORT}
-          REDIS_HOST=${REDIS_HOST}
-          REDIS_PORT=${REDIS_PORT}
-          REDIS_USERNAME=${REDIS_USERNAME}
-          REDIS_PASSWORD=${REDIS_PASSWORD}
-          EOL
-          
           # Reassemble the image
           echo 'Reassembling image file...'
           cat splits/image_* > image.tar.gz
