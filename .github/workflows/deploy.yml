@@ -8,9 +8,11 @@ env:
   IMAGE_NAME: ai-bot
   EC2_HOST: ec2-52-37-221-188.us-west-2.compute.amazonaws.com
   EC2_USER: ubuntu
+  #Chroma 
   CHROMA_PERSISTANCE_PATH: ~/
   CHROMA_SERVER_HOST: http://52.37.221.188
   CHROMA_SERVER_HTTP_PORT: 8000
+  #Redis
   REDIS_HOST: redis-13571.c238.us-central1-2.gce.redns.redis-cloud.com
   REDIS_PORT: 13571
   REDIS_USERNAME: default
