@@ -38,13 +38,14 @@ class EmbeddingService:
         bot_role = bot_role.replace(" assistant", "")
 
         # Your original system message
-        system_message = f"""You're the {bot_role} assistant: Start with a brief intro (5-10 words), then use concise bullet points (max 2 sentences each) based on provided context and memory. Incorporate relevant details from prior conversations stored in memory where applicable. Reply in the question's language or default to English."""
+        system_message = f"""You're the {bot_role} assistant: For greetings or introductions, respond briefly and naturally without bullet points. For content questions, start with a brief intro (5-10 words), then use concise bullet points based on context. Only answer content questions using provided context/memory. If information is missing, say 'I'm only able to answer questions based on the provided context.' Default to English unless user's question is in another language."""
+        # system_message = f"""You're the {bot_role} assistant: Start with a brief intro (5-10 words), then use concise bullet points (max 2 sentences each) based on provided context and memory. Incorporate relevant details from prior conversations stored in memory where applicable. Default to English unless the user's question is in a different language."""
         # system_message = """You're EngageBay's CRM assistant: Start with a brief intro (5-10 words), then use concise bullet points (max 2 sentences each) based only on provided context. Reply in the question's language or default to English."""
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_message),
             MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "Context: {context}\n\nQuestion: {input}\n\nAnswer based on both memory and context, in the same language as the question.")
+            ("human", "Context: {context}\n\nQuestion: {input}\n\nAnswer based strictly on both memory and context. If the context does not include relevant information, respond with 'I'm only able to answer questions based on the provided context.'")
         ])
         return prompt
 
@@ -83,7 +84,7 @@ class EmbeddingService:
             llm=self.chat_model,
             prompt=self.get_system_prompt(),
             memory=memory,
-            verbose=True
+            verbose=False
         )
         return conversation_id, chain
 
@@ -134,13 +135,18 @@ class EmbeddingService:
 
     def retrieve_answer(self, user_input: str, conversation_id: Optional[str] = None):
         # Get vectorstore for current collection
-        retriever = self._get_vectorstore().as_retriever(search_kwargs={"k": 3})
+        retriever = self._get_vectorstore().as_retriever(search_kwargs={"k": 2})
         
         # Get relevant documents
         docs = retriever.get_relevant_documents(user_input)
 
         # Process documents using the new method
         combined_context, sources = self._process_retrieved_documents(docs)
+        
+        # Truncate context if too long (approximate token limit)
+        max_chars = 40000  # Approximate character limit (~10k tokens)
+        if len(combined_context) > max_chars:
+            combined_context = combined_context[:max_chars] + "..."
 
         # Create chain with conversation memory
         conversation_id, chain = self.create_chain(conversation_id)
