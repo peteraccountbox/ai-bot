@@ -5,6 +5,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ai-bot # This should match the image name used in the script
+    image: ai-bot
+    container_name: ai-bot-container
     ports:
       - "8181:8181"
+    volumes:
+      - .:/workspace
+    restart: unless-stopped
+    networks:
+      - ai-network
+
+networks:
+  ai-network:
+    driver: bridge

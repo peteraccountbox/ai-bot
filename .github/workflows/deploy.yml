@@ -86,24 +86,21 @@ jobs:
           gunzip -f image.tar.gz
           docker load < image.tar
           
-          # Stop and remove only the target container
-          docker-compose stop app || true
-          docker-compose rm -f app || true
+          # Stop the existing container if running
+          if [ "$(docker ps -q -f name=ai-bot-container)" ]; then
+            docker stop ai-bot-container
+            docker rm ai-bot-container
+          fi
           
-          # Remove only the specific image
-          docker rmi $(docker images ai-bot -q) || true
+          # Remove old images but keep the running ones
+          docker images ai-bot -q | xargs -r docker rmi
           
-          # Debug information
-          echo "Docker images:"
-          docker images
-          echo "Docker volumes:"
-          docker volume ls
+          # Start the container with docker-compose
+          docker-compose pull || true
+          docker-compose up -d --remove-orphans
           
-          # Start only the specific service
-          docker-compose up -d --force-recreate app
+          # Clean up
+          docker system prune -f
           
-          # Show container status and logs
-          echo "Container Status:"
-          docker-compose ps app
-          echo "Container Logs:"
-          docker-compose logs --tail=50 app
+          # Show logs
+          docker-compose logs --tail=50
