@@ -6,7 +6,7 @@ from app.dao.embedding_dao import EmbeddingDAO
 from app.models.schemas import TrainRequest, ContentType
 from typing import Optional
 from app.utils.file_extractor import FileExtractor
-from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import LLMChain

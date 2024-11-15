@@ -5,9 +5,18 @@ on:
     branches: [ main ]
 
 env:
-  CONTAINER_NAME: ai-bot
+  IMAGE_NAME: ai-bot
   EC2_HOST: ec2-52-37-221-188.us-west-2.compute.amazonaws.com
   EC2_USER: ubuntu
+  #Chroma 
+  CHROMA_PERSISTANCE_PATH: ~/
+  CHROMA_SERVER_HOST: http://52.37.221.188
+  CHROMA_SERVER_HTTP_PORT: 8000
+  #Redis
+  REDIS_HOST: redis-13571.c238.us-central1-2.gce.redns.redis-cloud.com
+  REDIS_PORT: 13571
+  REDIS_USERNAME: default
+  REDIS_PASSWORD: QzOWoUleui8jA2AKCdPjCYEXniqosWmX
 
 jobs:
   deploy:
@@ -15,33 +24,86 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Docker context for remote host
+    - name: Install Docker Compose
+      run: |
+        sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        docker-compose --version
+
+    - name: Build Docker image using docker-compose
+      run: |
+        # Create .env file for build
+        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
+        
+        # Build the image
+        docker-compose build
+        
+        # Save the image
+        docker save ${IMAGE_NAME} > image.tar
+        gzip image.tar
+        
+        # Show image size
+        echo "Image size:"
+        ls -lh image.tar.gz
+
+    - name: Setup SSH
       run: |
         mkdir -p ~/.ssh
-        echo "${{ secrets.EC2_KEY }}" > ~/.ssh/ec2.pem
+        echo "${{ secrets.EC2_KEY }}" | sed 's/\\n/\n/g' > ~/.ssh/ec2.pem
         chmod 600 ~/.ssh/ec2.pem
+        ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Copy Docker files to EC2
+    - name: Split and Transfer to EC2
       run: |
-        scp -i ~/.ssh/ec2.pem -o StrictHostKeyChecking=no \
-          Dockerfile docker-compose.yml ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/
+        # Install required tools
+        sudo apt-get update && sudo apt-get install -y pv parallel
+        
+        # Create directory for split files
+        mkdir splits
+        
+        # Split the image into chunks
+        echo "Splitting files into chunks..."
+        split -b 50M image.tar.gz splits/image_
+        
+        # Create remote directory
+        ssh -i ~/.ssh/ec2.pem ${EC2_USER}@${EC2_HOST} "mkdir -p ~/app/splits"
+        
+        # Transfer splits in parallel (8 concurrent transfers)
+        echo "Transferring splits in parallel..."
+        ls splits/* | parallel -j 8 scp -i ~/.ssh/ec2.pem {} ${EC2_USER}@${EC2_HOST}:~/app/splits/
+        
+        # Copy config files
+        scp -i ~/.ssh/ec2.pem Dockerfile ${EC2_USER}@${EC2_HOST}:~/app/Dockerfile
+        # scp -i ~/.ssh/ec2.pem docker-compose.yml ${EC2_USER}@${EC2_HOST}:~/app/docker-compose.yml
+        scp -i ~/.ssh/ec2.pem requirements.txt ${EC2_USER}@${EC2_HOST}:~/app/requirements.txt
 
-    - name: Deploy to EC2
+    - name: Deploy on EC2
       uses: appleboy/ssh-action@master
       with:
         host: ${{ env.EC2_HOST }}
         username: ${{ env.EC2_USER }}
         key: ${{ secrets.EC2_KEY }}
         script: |
-          # Stop and remove existing container if it exists
-          docker stop ${CONTAINER_NAME} || true
-          docker rm ${CONTAINER_NAME} || true
+          cd ~/app
           
-          # Build and run the new image
-          docker build -t ${CONTAINER_NAME}:latest .
-          docker run -d \
-            --name ${CONTAINER_NAME} \
-            -p 8181:8181 \
-            -e OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
-            ${CONTAINER_NAME}:latest
-            ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}
+          echo 'Reassembling image file...'
+          cat splits/image_* > image.tar.gz
+          rm -rf splits
+          gunzip -f image.tar.gz
+          docker load < image.tar
+          
+          # Stop and remove containers properly
+          docker-compose down --volumes --remove-orphans || true
+          
+          # Remove old container and image if exists
+          docker rm -f ai-bot-container || true
+          docker rmi ai-bot || true
+          
+          # Clean up docker system
+          docker system prune -f
+          
+          # Create required directories
+          mkdir -p workspace
+          
+          # Start fresh with build
+          docker-compose up -d --build --force-recreate --renew-anon-volumes

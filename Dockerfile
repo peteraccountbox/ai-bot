@@ -1,22 +1,16 @@
-FROM ubuntu:22.04
+FROM python:3.11-slim
 
-# Install Python and other dependencies
-RUN apt-get update && \
-    apt-get install -y python3.11 python3-pip curl sqlite3 && \
-    rm -rf /var/lib/apt/lists/*
-
-# Set working directory to the parent folder that contains both main.py and app/
 WORKDIR /workspace
 
+# Copy requirements first to leverage Docker caching
 COPY requirements.txt .
 
 # Install dependencies
-RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy everything to the workspace
+# Copy application files
 COPY . .
 
 EXPOSE 8181
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8181"]
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8181"]
