@@ -2,7 +2,7 @@ name: Deploy to EC2
 
 on:
   push:
-    branches: [ deploy ]
+    branches: [ main ]
 
 env:
   IMAGE_NAME: ai-bot
@@ -86,24 +86,24 @@ jobs:
         script: |
           cd ~/app
           
-          # Reassemble the image
           echo 'Reassembling image file...'
           cat splits/image_* > image.tar.gz
           rm -rf splits
-          
-          # Load the Docker image
           gunzip -f image.tar.gz
           docker load < image.tar
           
-          # Stop the existing container if running
-          if [ "$(docker ps -q -f name=ai-bot-container)" ]; then
-            docker stop ai-bot-container
-            docker rm ai-bot-container
-          fi
+          # Stop and remove containers properly
+          docker-compose down --volumes --remove-orphans || true
           
-          # Remove old images but keep the running ones
-          docker images ai-bot -q | xargs -r docker rmi
+          # Remove old container and image if exists
+          docker rm -f ai-bot-container || true
+          docker rmi ai-bot || true
           
-          # Start the container with docker-compose
-          docker-compose pull || true
-          docker-compose up -d --build
+          # Clean up docker system
+          docker system prune -f
+          
+          # Create required directories
+          mkdir -p workspace
+          
+          # Start fresh with build
+          docker-compose up -d --build --force-recreate --renew-anon-volumes
