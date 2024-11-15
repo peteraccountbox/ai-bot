@@ -56,21 +56,17 @@ jobs:
       run: |
         docker save ${{ env.IMAGE_NAME }}:latest | gzip > image.tar.gz
         mkdir -p splits
-        # Increased split size to 20M for fewer splits
         split -b 20M image.tar.gz splits/image_
-        # Show split files for verification
         ls -lh splits/
-        
-    - name: Upload splits in parallel
+
+    - name: Upload splits
       run: |
         cd splits
-        # Upload splits in parallel using background processes
         for file in image_*; do
-          scp -o StrictHostKeyChecking=no -i ${{ secrets.EC2_KEY }} $file ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/app/splits/ &
+          scp -o StrictHostKeyChecking=no -i key.pem $file ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/app/splits/ &
         done
-        # Wait for all background uploads to complete
         wait
-        
+
     - name: Deploy on EC2
       uses: appleboy/ssh-action@master
       with:
@@ -79,15 +75,11 @@ jobs:
         key: ${{ secrets.EC2_KEY }}
         script: |
           cd ~/app
-          
-          # Reassemble image in parallel with cleanup
-          {
-            echo 'Reassembling image file...'
-            cat splits/image_* > image.tar.gz &
-            
-            # Cleanup old splits in background
-            rm -rf splits/* &
-          } wait
+          echo 'Reassembling image file...'
+          cat splits/image_* > image.tar.gz
+          rm -rf splits/*
+          gunzip -f image.tar.gz
+          docker load < image.tar
           
           # Ensure .env file exists and has correct permissions
           touch .env
@@ -104,10 +96,6 @@ jobs:
           REDIS_USERNAME=${REDIS_USERNAME}
           REDIS_PASSWORD=${REDIS_PASSWORD}
           EOL
-          
-          # Load the Docker image
-          gunzip -f image.tar.gz
-          docker load < image.tar
           
           # Stop the existing container if running
           if [ "$(docker ps -q -f name=ai-bot-container)" ]; then
