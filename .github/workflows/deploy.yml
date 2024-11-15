@@ -122,7 +122,7 @@ jobs:
           
           # Start the container with docker-compose
           docker-compose pull || true
-          docker-compose up -d --remove-orphans
+          docker-compose up -d --remove-orphans --build
           
           # Clean up
           docker system prune -f
