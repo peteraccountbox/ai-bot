@@ -52,20 +52,29 @@ jobs:
         chmod 600 ~/.ssh/ec2.pem
         ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Save and split Docker image
+    - name: Split and Transfer to EC2
       run: |
-        docker save ${{ env.IMAGE_NAME }}:latest | gzip > image.tar.gz
-        mkdir -p splits
-        split -b 20M image.tar.gz splits/image_
-        ls -lh splits/
-
-    - name: Upload splits
-      run: |
-        cd splits
-        for file in image_*; do
-          scp -o StrictHostKeyChecking=no -i key.pem $file ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:~/app/splits/ &
-        done
-        wait
+        # Install required tools
+        sudo apt-get update && sudo apt-get install -y pv parallel
+        
+        # Create directory for split files
+        mkdir splits
+        
+        # Split the image into chunks
+        echo "Splitting files into chunks..."
+        split -b 50M image.tar.gz splits/image_
+        
+        # Create remote directory
+        ssh -i ~/.ssh/ec2.pem ${EC2_USER}@${EC2_HOST} "mkdir -p ~/app/splits"
+        
+        # Transfer splits in parallel (8 concurrent transfers)
+        echo "Transferring splits in parallel..."
+        ls splits/* | parallel -j 8 scp -i ~/.ssh/ec2.pem {} ${EC2_USER}@${EC2_HOST}:~/app/splits/
+        
+        # Copy config files
+        scp -i ~/.ssh/ec2.pem docker-compose.yml ${EC2_USER}@${EC2_HOST}:~/app/docker-compose.yml
+        scp -i ~/.ssh/ec2.pem .env ${EC2_USER}@${EC2_HOST}:~/app/.env
+        scp -i ~/.ssh/ec2.pem requirements.txt ${EC2_USER}@${EC2_HOST}:~/app/requirements.txt
 
     - name: Deploy on EC2
       uses: appleboy/ssh-action@master
@@ -75,11 +84,6 @@ jobs:
         key: ${{ secrets.EC2_KEY }}
         script: |
           cd ~/app
-          echo 'Reassembling image file...'
-          cat splits/image_* > image.tar.gz
-          rm -rf splits/*
-          gunzip -f image.tar.gz
-          docker load < image.tar
           
           # Ensure .env file exists and has correct permissions
           touch .env
@@ -96,6 +100,15 @@ jobs:
           REDIS_USERNAME=${REDIS_USERNAME}
           REDIS_PASSWORD=${REDIS_PASSWORD}
           EOL
+          
+          # Reassemble the image
+          echo 'Reassembling image file...'
+          cat splits/image_* > image.tar.gz
+          rm -rf splits
+          
+          # Load the Docker image
+          gunzip -f image.tar.gz
+          docker load < image.tar
           
           # Stop the existing container if running
           if [ "$(docker ps -q -f name=ai-bot-container)" ]; then
