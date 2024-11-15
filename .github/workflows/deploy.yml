@@ -87,11 +87,11 @@ jobs:
           docker load < image.tar
           
           # Stop and remove only the target container
-          docker-compose stop ${{ env.IMAGE_NAME }}-app || true
-          docker-compose rm -f ${{ env.IMAGE_NAME }}-app || true
+          docker-compose stop app || true
+          docker-compose rm -f app || true
           
           # Remove only the specific image
-          docker rmi $(docker images ${{ env.IMAGE_NAME }}-app -q) || true
+          docker rmi $(docker images ai-bot -q) || true
           
           # Debug information
           echo "Docker images:"
@@ -100,10 +100,10 @@ jobs:
           docker volume ls
           
           # Start only the specific service
-          docker-compose up -d --force-recreate ${{ env.IMAGE_NAME }}-app
+          docker-compose up -d --force-recreate app
           
           # Show container status and logs
           echo "Container Status:"
-          docker-compose ps ${{ env.IMAGE_NAME }}-app
+          docker-compose ps app
           echo "Container Logs:"
-          docker-compose logs --tail=50 ${{ env.IMAGE_NAME }}-app
+          docker-compose logs --tail=50 app
