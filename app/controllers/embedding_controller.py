@@ -14,7 +14,7 @@ embedding_service = EmbeddingService()
 
 @router.get("/")
 def read_root():
-    return {"message": "Welcome to AI Bot API!"}
+    return {"message": "Welcome to AI Bot!"}
 
 async def set_index_context(index_name: str):
     set_index_name(index_name)
