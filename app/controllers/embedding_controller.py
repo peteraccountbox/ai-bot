@@ -7,6 +7,7 @@ from app.utils.context import set_index_name, clear_index_name, set_bot_role, cl
 from typing import Optional
 from app.models.schemas import CrawlRequest
 from app.services.services import crawl_website
+from app.services.sitemap_url_fetcher import get_all_sitemap_urls
 
 router = APIRouter()
 embedding_service = EmbeddingService()
@@ -100,7 +101,8 @@ async def clear_chat_history(
 async def crawl(crawl_request: CrawlRequest):
     try:
         # Call the crawl_website function from services.py
-        result = crawl_website(crawl_request)
+        # result = crawl_website(crawl_request)
+        result = get_all_sitemap_urls(crawl_request.website_url, crawl_request.excluded_paths, 5000)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
