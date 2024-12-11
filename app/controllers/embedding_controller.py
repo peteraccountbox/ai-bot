@@ -5,8 +5,10 @@ from app.models.schemas import TrainRequest, QueryRequest
 from app.services.embedding_service import EmbeddingService
 from app.utils.context import set_index_name, clear_index_name, set_bot_role, clear_bot_role
 from typing import Optional
-from app.models.schemas import CrawlRequest
+from app.models.schemas import CrawlRequest, ScrapeRequest
 from app.services.services import crawl_website
+from app.services.zyte_scrapy import scrape, get_job_items, scrape_from_sitemap
+from app.services.sitemap_url_fetcher import get_all_sitemap_urls
 
 router = APIRouter()
 embedding_service = EmbeddingService()
@@ -100,7 +102,39 @@ async def clear_chat_history(
 async def crawl(crawl_request: CrawlRequest):
     try:
         # Call the crawl_website function from services.py
-        result = crawl_website(crawl_request)
+        # result = crawl_website(crawl_request)
+        result = get_all_sitemap_urls(crawl_request.website_url, crawl_request.excluded_paths, 5000)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/urls-from-sitemaps")
+async def fetch_urls_using_sitemap_request(crawl_request: CrawlRequest):
+    try:
+        # Call the crawl_website function from services.py
+        result = get_all_sitemap_urls(crawl_request.website_url, crawl_request.excluded_paths, 1000)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/scrape")
+async def start_scrape(request: ScrapeRequest):
+    try:
+        job_key, job_uuid = scrape(request.start_url, request.depth)
+        return {
+            "job_key": job_key,
+            "job_uuid": job_uuid,
+            "message": "Scraping job started successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/scrape/items")
+async def get_items(job_key: str):
+    items, error = get_job_items(job_key)
+    if error:
+        raise HTTPException(status_code=404, detail=error)
+    return {
+        "items": items,
+        "count": len(items)
+    }

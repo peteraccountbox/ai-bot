@@ -36,3 +36,7 @@ class QueryRequest(BaseModel):
 class CrawlRequest(BaseModel):
     website_url: str
     excluded_paths: str
+
+class ScrapeRequest(BaseModel):
+    start_url: str
+    depth: int = 2
