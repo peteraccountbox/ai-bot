@@ -35,15 +35,11 @@ jobs:
         # Create .env file for build
         echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
         
-        # Build the image with no cache
-        docker-compose build --no-cache
-        
-        # Tag with timestamp for uniqueness
-        export IMAGE_TAG=$(date +%s)
-        docker tag ${IMAGE_NAME} ${IMAGE_NAME}:${IMAGE_TAG}
+        # Build the image
+        docker-compose build
         
         # Save the image
-        docker save ${IMAGE_NAME}:${IMAGE_TAG} > image.tar
+        docker save ${IMAGE_NAME} > image.tar
         gzip image.tar
         
         # Show image size
@@ -88,7 +84,6 @@ jobs:
         username: ${{ env.EC2_USER }}
         key: ${{ secrets.EC2_KEY }}
         script: |
-          # Force clean workspace
           cd ~/app
           
           echo 'Reassembling image file...'
@@ -97,15 +92,18 @@ jobs:
           gunzip -f image.tar.gz
           docker load < image.tar
           
-          # More aggressive cleanup
+          # Stop and remove containers properly
           docker-compose down --volumes --remove-orphans || true
-          docker rm -f $(docker ps -aq) || true
-          docker rmi $(docker images -q) || true
-          docker system prune -af --volumes
+          
+          # Remove old container and image if exists
+          docker rm -f ai-bot-container || true
+          docker rmi ai-bot || true
+          
+          # Clean up docker system
+          docker system prune -f
           
           # Create required directories
           mkdir -p workspace
           
           # Start fresh with build
-          docker-compose pull
-          docker-compose up -d --build --force-recreate --no-cache --renew-anon-volumes
+          docker-compose up -d --build --force-recreate --renew-anon-volumes
