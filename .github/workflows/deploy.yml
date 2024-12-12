@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 env:
-  IMAGE_NAME: ai-bot
+  IMAGE_NAME: ai-bot:1.0
   EC2_HOST: ec2-52-37-221-188.us-west-2.compute.amazonaws.com
   EC2_USER: ubuntu
   #Chroma 
@@ -37,8 +37,6 @@ jobs:
         
         # Build the image
         docker-compose build --no-cache
-
-        rm image.tar
         
         # Save the image
         docker save ${IMAGE_NAME} > image.tar
@@ -99,7 +97,7 @@ jobs:
           
           # Remove old container and image if exists
           docker rm -f ai-bot-container || true
-          docker rmi ai-bot || true
+          docker rmi ${{ env.IMAGE_NAME }} || true
           
           # Clean up docker system
           docker system prune -f

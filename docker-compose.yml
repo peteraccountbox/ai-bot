@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ai-bot
+    image: ai-bot:1.0
     container_name: ai-bot-container
     ports:
       - "8181:8181"
