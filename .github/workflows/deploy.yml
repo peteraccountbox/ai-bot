@@ -24,27 +24,37 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Install Docker Compose
-      run: |
-        sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
-        docker-compose --version
+    # Docker Compose comes pre-installed on GitHub runners
+    # - name: Install Docker Compose
+    #   run: |
+    #     sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    #     sudo chmod +x /usr/local/bin/docker-compose
+    #     docker-compose --version
 
     - name: Build Docker image using docker-compose
       run: |
         # Create .env file for build
         echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" > .env
         
-        # Build the image
+        # Clean all Docker cache and images
+        docker system prune -a -f
+        docker builder prune -a -f
+        docker image prune -a -f
+        
+        # Remove specific image if exists
+        docker rmi ${IMAGE_NAME} || true
+        
+        # Build the image with no cache
         docker-compose build --no-cache
         
         # Save the image
         docker save ${IMAGE_NAME} > image.tar
         gzip image.tar
         
-        # Show image size
-        echo "Image size:"
+        # Show image size and details
+        echo "Image size and details:"
         ls -lh image.tar.gz
+        docker images ${IMAGE_NAME} --format "{{.ID}} {{.CreatedAt}}"
 
     - name: Setup SSH
       run: |
