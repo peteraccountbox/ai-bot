@@ -37,8 +37,6 @@ jobs:
         
         # Build the image
         docker-compose build --no-cache
-
-        rm image.tar
         
         # Save the image
         docker save ${IMAGE_NAME} > image.tar
