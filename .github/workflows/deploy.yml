@@ -74,7 +74,7 @@ jobs:
         
         # Copy config files
         scp -i ~/.ssh/ec2.pem Dockerfile ${EC2_USER}@${EC2_HOST}:~/app/Dockerfile
-        scp -i ~/.ssh/ec2.pem docker-compose.yml ${EC2_USER}@${EC2_HOST}:~/app/docker-compose.yml
+        # scp -i ~/.ssh/ec2.pem docker-compose.yml ${EC2_USER}@${EC2_HOST}:~/app/docker-compose.yml
         scp -i ~/.ssh/ec2.pem requirements.txt ${EC2_USER}@${EC2_HOST}:~/app/requirements.txt
 
     - name: Deploy on EC2
@@ -98,7 +98,6 @@ jobs:
           # Remove old container and image if exists
           docker rm -f ai-bot-container || true
           docker rmi ${{ env.IMAGE_NAME }} || true
-          docker rmi ${{ env.IMAGE_NAME }} || true 
           
           # Clean up docker system
           docker system prune -f
